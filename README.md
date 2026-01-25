@@ -8,7 +8,7 @@
 
 *Named after Raphael, the red-masked Ninja Turtle known for his speed and parallel sai strikes*
 
-[![GitHub](https://img.shields.io/github/license/hellangleZ/Raffaello)](LICENSE)
+[![GitHub](https://img.shields.io/github/license/re-zhou/Raffaello)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 > **English** | [中文](#中文版本)
@@ -40,7 +40,7 @@ Phase 5: Documentation and Examples
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/hellangleZ/Raffaello
+git clone https://github.com/re-zhou/Raffaello
 cd Raffaello
 
 # 2. Ensure dependencies are installed
