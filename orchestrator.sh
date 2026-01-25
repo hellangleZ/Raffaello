@@ -4,17 +4,18 @@
 
 set -euo pipefail
 
-# Script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Project root directory (inherited from ralph.sh via SCRIPT_DIR)
+# Do NOT redefine SCRIPT_DIR here to avoid path collision
+PROJECT_ROOT="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
 # Source libraries
-source "$SCRIPT_DIR/lib/detect-cli.sh"
-source "$SCRIPT_DIR/lib/agent-api.sh"
-source "$SCRIPT_DIR/lib/load-agents.sh"
+source "$PROJECT_ROOT/lib/detect-cli.sh"
+source "$PROJECT_ROOT/lib/agent-api.sh"
+source "$PROJECT_ROOT/lib/load-agents.sh"
 
 # Configuration
-PRD_FILE="${PRD_FILE:-$SCRIPT_DIR/prd.json}"
-WORKFLOWS_DIR="$SCRIPT_DIR/workflows"
+PRD_FILE="${PRD_FILE:-$PROJECT_ROOT/prd.json}"
+WORKFLOWS_DIR="$PROJECT_ROOT/workflows"
 
 # Get story ID from argument
 STORY_ID=${1:-}
@@ -104,18 +105,25 @@ parse_workflow() {
     WORKFLOW_PHASES+=("$phase")
   done < <(yq '.phases[]' "$workflow_file")
 
-  # Get retry policy
-  declare -gA RETRY_POLICY
+  # Get retry policy (use temp file for Bash 3.2 compatibility)
+  RETRY_POLICY_FILE=$(mktemp)
   for phase in "${WORKFLOW_PHASES[@]}"; do
     local max_attempts=$(yq ".retry_policy.$phase.max_attempts // 1" "$workflow_file")
-    RETRY_POLICY[$phase]=$max_attempts
+    echo "$phase:$max_attempts" >> "$RETRY_POLICY_FILE"
   done
 }
 
 # Execute a single phase
 execute_phase() {
   local phase=$1
-  local max_attempts=${RETRY_POLICY[$phase]:-1}
+
+  # Get max_attempts from retry policy file
+  local max_attempts=1
+  if [[ -f "$RETRY_POLICY_FILE" ]]; then
+    max_attempts=$(grep "^$phase:" "$RETRY_POLICY_FILE" | cut -d: -f2)
+    max_attempts=${max_attempts:-1}
+  fi
+
   local attempt=1
 
   log_info "Executing phase: $phase (max attempts: $max_attempts)"
@@ -227,6 +235,9 @@ Phases: ${WORKFLOW_PHASES[*]}
 Co-Authored-By: Claude <noreply@anthropic.com>" || true
 
   log_success "Story $STORY_ID completed successfully!"
+
+  # Cleanup temp file
+  [[ -f "$RETRY_POLICY_FILE" ]] && rm -f "$RETRY_POLICY_FILE"
 }
 
 # Run main

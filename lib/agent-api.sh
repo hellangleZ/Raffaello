@@ -5,8 +5,8 @@
 set -euo pipefail
 
 # Source CLI detection
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/detect-cli.sh"
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$LIB_DIR/detect-cli.sh"
 
 # Temporary directory for agent communication
 AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
@@ -20,7 +20,7 @@ spawn_agent() {
   local task_message=$2
   local story_id=${3:-"default"}
 
-  local agent_prompt_file="$SCRIPT_DIR/../agents/${agent_name}.md"
+  local agent_prompt_file="$LIB_DIR/../agents/${agent_name}.md"
 
   if [[ ! -f "$agent_prompt_file" ]]; then
     echo "ERROR: Agent prompt not found: $agent_prompt_file" >&2
@@ -40,6 +40,7 @@ Communication Directory: $AGENT_COMM_DIR/$story_id"
   if [[ "$cli" == "claude-code" ]]; then
     # Claude Code: Use stdin for prompt
     # Task tool manages agent lifecycle automatically
+    mkdir -p "$AGENT_COMM_DIR/$story_id"
     local output_file="$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt"
 
     echo "$full_prompt" | claude --print > "$output_file" 2>&1 &
@@ -53,6 +54,7 @@ Communication Directory: $AGENT_COMM_DIR/$story_id"
     local agent_type="worker"
 
     # Create temporary file for Codex input
+    mkdir -p "$AGENT_COMM_DIR/$story_id"
     local codex_input="$AGENT_COMM_DIR/$story_id/${agent_name}-input.json"
     cat > "$codex_input" <<EOF
 {
