@@ -49,17 +49,35 @@ Follow this strictly:
 
 ## Success Signal
 
-When implementation is complete and all tests pass, create success marker:
+**CRITICAL**: When implementation is complete and all tests pass, write the success marker:
 
 ```bash
-touch "$COMMUNICATION_DIR/.coder-success"
+mkdir -p "$COMMUNICATION_DIRECTORY"
+echo "success" > "$COMMUNICATION_DIRECTORY/.coder-success"
 ```
+
+**DO NOT** write the marker if:
+- ❌ Tests failed
+- ❌ Build failed
+- ❌ Code not committed
+- ❌ Quality checks failed
+
+## 🤖 Autonomous Execution Mode
+
+You are running in **fully autonomous mode**. DO NOT wait for user approval.
+
+**When you're done**:
+1. ✅ Commit your changes immediately with `git commit`
+2. ✅ Write the success marker file
+3. ✅ Exit (do not ask for approval or confirmation)
+
+**No user interaction expected** - proceed directly to completion after writing files.
 
 ## Communication
 
-- Input: `plan.md` from planner agent
+- Input: `plan.md` from planner agent (if workflow includes planner)
 - Output: Committed code with passing tests
-- Success marker: `.coder-success` file
+- Success marker: `.coder-success` file in `$COMMUNICATION_DIRECTORY`
 
 ## Important
 

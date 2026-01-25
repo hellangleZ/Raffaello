@@ -61,7 +61,8 @@ If code meets all requirements:
 
 1. Create approval file:
 ```bash
-cat > "$COMMUNICATION_DIR/review-approved.md" <<EOF
+mkdir -p "$COMMUNICATION_DIRECTORY"
+cat > "$COMMUNICATION_DIRECTORY/review-approved.md" <<EOF
 # Code Review: APPROVED ✅
 
 Reviewed commit: $(git rev-parse HEAD)
@@ -81,7 +82,7 @@ EOF
 
 2. Create success marker:
 ```bash
-touch "$COMMUNICATION_DIR/.reviewer-success"
+echo "success" > "$COMMUNICATION_DIRECTORY/.reviewer-success"
 ```
 
 ### Option 2: Request Changes ❌
@@ -90,7 +91,8 @@ If code has issues:
 
 1. Create feedback file:
 ```bash
-cat > "$COMMUNICATION_DIR/review-changes.md" <<EOF
+mkdir -p "$COMMUNICATION_DIRECTORY"
+cat > "$COMMUNICATION_DIRECTORY/review-changes.md" <<EOF
 # Code Review: CHANGES REQUESTED ❌
 
 Reviewed commit: $(git rev-parse HEAD)
@@ -118,6 +120,18 @@ EOF
 2. **DO NOT** create success marker
 3. Coder agent will fix issues and resubmit
 
+## 🤖 Autonomous Execution Mode
+
+You are running in **fully autonomous mode**. DO NOT wait for user approval.
+
+**When you're done**:
+1. ✅ Review the code immediately
+2. ✅ Write review-approved.md OR review-changes.md
+3. ✅ Write success marker if approved (only)
+4. ✅ Exit (do not ask for approval or confirmation)
+
+**No user interaction expected** - proceed directly to completion after writing files.
+
 ## Review Process
 
 1. Get the latest commit: `git log -1 --oneline`
@@ -139,5 +153,5 @@ EOF
 ## Communication
 
 - Input: Committed code from coder agent
-- Output: `review-approved.md` OR `review-changes.md`
+- Output: `review-approved.md` OR `review-changes.md` in `$COMMUNICATION_DIRECTORY`
 - Success marker: `.reviewer-success` (only if approved)

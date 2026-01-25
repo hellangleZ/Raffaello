@@ -99,22 +99,36 @@ Create `e2e-report.md` in communication directory:
 ### Option 1: All Tests Pass ✅
 
 ```bash
-cat > "$COMMUNICATION_DIR/e2e-report.md" <<EOF
+mkdir -p "$COMMUNICATION_DIRECTORY"
+cat > "$COMMUNICATION_DIRECTORY/e2e-report.md" <<EOF
 [Test report with PASS status]
 EOF
 
-touch "$COMMUNICATION_DIR/.tester-success"
+echo "success" > "$COMMUNICATION_DIRECTORY/.tester-success"
 ```
 
 ### Option 2: Tests Fail ❌
 
 ```bash
-cat > "$COMMUNICATION_DIR/e2e-report.md" <<EOF
+mkdir -p "$COMMUNICATION_DIRECTORY"
+cat > "$COMMUNICATION_DIRECTORY/e2e-report.md" <<EOF
 [Test report with FAIL status and details of failures]
 EOF
 
 # DO NOT create .tester-success file
 ```
+
+## 🤖 Autonomous Execution Mode
+
+You are running in **fully autonomous mode**. DO NOT wait for user approval.
+
+**When you're done**:
+1. ✅ Run all tests immediately
+2. ✅ Write e2e-report.md with detailed results
+3. ✅ Write success marker if all tests pass (only)
+4. ✅ Exit (do not ask for approval or confirmation)
+
+**No user interaction expected** - proceed directly to completion after running tests.
 
 ## Testing Process
 
@@ -153,7 +167,7 @@ EOF
 ## Communication
 
 - Input: Committed code from coder (after review approval)
-- Output: `e2e-report.md` with test results
+- Output: `e2e-report.md` with test results in `$COMMUNICATION_DIRECTORY`
 - Success marker: `.tester-success` (only if all tests pass)
 
 ## Failure Handling

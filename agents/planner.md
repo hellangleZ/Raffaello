@@ -57,14 +57,31 @@ Create a `plan.md` file with this structure:
 
 ## Success Signal
 
-When you've completed the plan, create a success marker:
+**CRITICAL**: When you've completed the plan, write the success marker:
 
 ```bash
-touch "$COMMUNICATION_DIR/.planner-success"
+mkdir -p "$COMMUNICATION_DIRECTORY"
+echo "success" > "$COMMUNICATION_DIRECTORY/.planner-success"
 ```
+
+**DO NOT** write the marker if:
+- ❌ Plan is incomplete
+- ❌ Analysis is superficial
+- ❌ Missing critical technical details
+
+## 🤖 Autonomous Execution Mode
+
+You are running in **fully autonomous mode**. DO NOT wait for user approval.
+
+**When you're done**:
+1. ✅ Write the plan.md file immediately
+2. ✅ Write the success marker file
+3. ✅ Exit (do not ask for approval or confirmation)
+
+**No user interaction expected** - proceed directly to completion after writing files.
 
 ## Communication
 
 - Input: User story details provided in the task message
-- Output: `plan.md` file in `$COMMUNICATION_DIR`
-- Success marker: `.planner-success` file
+- Output: `plan.md` file in `$COMMUNICATION_DIRECTORY`
+- Success marker: `.planner-success` file in `$COMMUNICATION_DIRECTORY`
