@@ -19,7 +19,7 @@
    - `workflows/`, `docs/` - Prepared for future phases
 
 2. **CLI Detection Layer** (`lib/detect-cli.sh`)
-   - Auto-detects Claude Code or Codex CLI
+   - Auto-detects Claude Code CLI
    - Validates multi-agent support configuration
    - Returns CLI-specific agent directories
    - **Tested**: ✅ Successfully detects Claude Code
@@ -1029,7 +1029,6 @@ Ran ralph.sh with real test project and discovered/fixed 4 critical bugs:
 **Remaining Work**:
 1. Update agent prompts to write success markers
 2. Implement task output retrieval for Claude Code
-3. Test with Codex's spawn_agent API
 
 **Overall Status**: 89% complete (8/9 components working)
 

@@ -9,7 +9,6 @@ Get Ralph Parallel up and running in 5 minutes!
 - **macOS** or **Linux**
 - **Bash** 3.2+
 - **git** 2.0+
-- **Claude Code** or **Codex** CLI installed
 - Basic understanding of git and bash
 
 ## Installation
@@ -48,9 +47,8 @@ yq --version    # Should show yq (https://github.com/mikefarah/yq/) version 4.x
 # Multi-agents support: ✓ Enabled
 ```
 
-If you don't have Claude Code or Codex installed:
+If you don't have Claude Code installed:
 - **Claude Code**: Download from https://claude.ai/code
-- **Codex**: Follow instructions at your Codex provider
 
 ### Step 4: Test System
 
@@ -486,7 +484,6 @@ Congratulations! You've successfully run Ralph Parallel!
 - **macOS** 或 **Linux**
 - **Bash** 3.2+
 - **git** 2.0+
-- 已安装 **Claude Code** 或 **Codex** CLI
 - 基本了解 git 和 bash
 
 ## 安装

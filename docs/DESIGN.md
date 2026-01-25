@@ -129,7 +129,7 @@ source "workflows/${workflow}.yaml"
 for phase in "${phases[@]}"; do
   agent="${phase}_agent"
 
-  # Call Claude Code/Codex, pass corresponding agent instructions
+  # Call Claude Code, pass corresponding agent instructions
   claude --agent "$agent" < "agents/${agent}.md"
 
   # Check if phase passed
@@ -337,7 +337,6 @@ check_multiagents_support() {
     if grep -q "multi-agents = true" ~/.codex/config.toml 2>/dev/null; then
       return 0
     else
-      echo "ERROR: Codex multi-agents not enabled"
       echo "Add to ~/.codex/config.toml:"
       echo "[features]"
       echo "multi-agents = true"
@@ -370,7 +369,6 @@ $full_prompt
 EOF
 
   elif [[ "$cli" == "codex" ]]; then
-    # Codex: Use spawn_agent API
     codex <<EOF
 {
   "tool": "spawn_agent",
@@ -644,11 +642,9 @@ Simple and clear, highlights core feature
 
 ### 2. Supported CLI: Both Claude Code and Codex ✅
 - **Claude Code**: Uses Task tool (`~/.claude/tasks/`)
-- **Codex**: Uses Multi-agents API (`spawn_agent`, `wait`, `close_agent`)
 - **Config Detection**: Auto-identify CLI type
 
 **Codex Multi-agents API Verification**:
-- ✅ Codex supports multi-agents (`features.multi-agents = true` in `config.toml`)
 - ✅ API: `spawn_agent(message, agent_type)` → `{agent_id}`
 - ✅ API: `wait(agent_ids[])` → Wait for completion
 - ✅ API: `close_agent(agent_id)` → Cleanup resources
