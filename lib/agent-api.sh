@@ -46,10 +46,10 @@ Communication Directory: $AGENT_COMM_DIR/$story_id"
   echo "$full_prompt" > "$prompt_file"
 
   # Run claude with auto-accept permissions for autonomous execution
-  # The agent prompts already specify autonomous mode, but we need to allow file writes
-  # NOTE: Use --dangerously-skip-permissions flag for fully autonomous execution
+  # IMPORTANT: Run from current directory (project root), not from communication directory
+  # Pass COMMUNICATION_DIRECTORY as environment variable so agents know where to write markers
   local task_output
-  task_output=$(cd "$AGENT_COMM_DIR/$story_id" && claude --dangerously-skip-permissions --print < "$prompt_file" 2>&1)
+  task_output=$(COMMUNICATION_DIRECTORY="$AGENT_COMM_DIR/$story_id" claude --dangerously-skip-permissions --print < "$prompt_file" 2>&1)
 
   # Extract task ID from output (format: "Command running in background with ID: <id>")
   local task_id
