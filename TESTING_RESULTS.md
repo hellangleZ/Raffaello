@@ -79,6 +79,22 @@ Claude Code's `claude` CLI is designed for interactive use or single tasks, not 
 
 **Status**: Not implemented
 
+**Proof of Concept**: Manual testing shows agents execute correctly but don't write success markers.
+
+**Test Evidence** (Task b84f405):
+```
+$ claude --print < /tmp/ralph-parallel/US001/coder-prompt.txt
+
+Result:
+✅ Agent successfully implemented US001: Add Task Input
+✅ Followed TDD principles and coding standards
+✅ Created comprehensive tests (5 tests, 100% coverage)
+❌ Did NOT write success marker file
+❌ Waiting for approval (interactive mode)
+```
+
+**Root Cause**: Agent prompts lack explicit success marker instructions.
+
 **Required**:
 Each agent (planner, coder, reviewer, tester) must write a success marker file when they complete successfully:
 
@@ -86,22 +102,26 @@ Each agent (planner, coder, reviewer, tester) must write a success marker file w
 echo "success" > "$AGENT_COMM_DIR/$STORY_ID/.${AGENT_NAME}-success"
 ```
 
-**Example Agent Prompt Addition**:
-```markdown
-## Success Criteria
+**Agent Prompt Updates Needed**:
 
-When you have successfully completed this phase, write a success marker:
+For **coder.md**, add at the end:
+```markdown
+## Success Marker
+
+When all tests pass and you've committed the code, write the success marker:
 
 ```bash
-echo "success" > /tmp/ralph-parallel/$STORY_ID/.coder-success
+mkdir -p "$COMMUNICATION_DIRECTORY"
+echo "success" > "$COMMUNICATION_DIRECTORY/.coder-success"
 ```
 
-DO NOT write the success marker if:
+DO NOT write the marker if:
 - Tests failed
 - Build failed
-- Quality checks failed
-- Implementation is incomplete
+- Code not committed
 ```
+
+Similar updates needed for planner.md, reviewer.md, and tester.md.
 
 ### 3. Agent Output Retrieval (50%)
 
