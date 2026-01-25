@@ -226,4 +226,144 @@ Estimated: 2.5 hours (within 2-3 hour estimate for Phase 2)
 
 ---
 
-*Next: Phase 3 - Workflow System (add workflow-parser.sh)*
+## Phase 3: Workflow System ✅
+
+**Date**: 2026-01-25
+**Status**: Complete
+
+### What Was Implemented
+
+1. **Workflow Parser** (`lib/workflow-parser.sh`)
+   - Comprehensive YAML parser with CLI interface
+   - 4 commands: `list`, `validate`, `show`, `parse`
+   - Validates workflow structure and agent existence
+   - Exports workflow to environment variables
+   - Checks YAML syntax and field types
+   - **310 lines** of robust parsing logic
+
+2. **Workflow Validation**
+   - Required field validation (name, phases)
+   - Type checking (phases must be array, retry_policy must be object)
+   - Agent existence validation (checks core + optional agents)
+   - Positive integer validation for max_attempts
+   - Validates all workflows with single command
+
+3. **Workflow Documentation** (`docs/WORKFLOWS.md`)
+   - Complete bilingual guide (English + Chinese)
+   - Detailed explanation of all 3 workflows
+   - YAML format specification
+   - Custom workflow creation guide
+   - CLI usage examples
+   - Troubleshooting section
+   - Best practices
+
+4. **Test Suite** (`test-workflows.sh`)
+   - 8 comprehensive tests
+   - Tests all workflow parser commands
+   - Validates dependency analyzer
+   - Checks CLI detection
+   - Verifies agent discovery
+   - **All tests passing** ✅
+
+### Files Created/Modified
+
+```
+ralph-parallel/
+├── lib/
+│   └── workflow-parser.sh          # 310 lines - YAML parser with CLI
+├── docs/
+│   └── WORKFLOWS.md                # 350+ lines - Complete workflow guide
+├── test-workflows.sh               # 120 lines - Test suite
+└── workflows/
+    └── full-stack.yaml             # Updated description
+```
+
+### Testing Results
+
+**Workflow Parser CLI**:
+```bash
+# List workflows
+$ ./lib/workflow-parser.sh list
+simple
+full-stack
+standard
+
+# Show workflow
+$ ./lib/workflow-parser.sh show simple
+Workflow: simple
+Description: Simple workflow for straightforward stories - minimal phases
+Phases:
+  1. coder (max attempts: 2)
+  2. tester (max attempts: 1)
+
+# Validate all workflows
+$ ./lib/workflow-parser.sh validate
+Validation Summary:
+  Total: 3
+  Passed: 2  (simple, standard)
+  Failed: 1  (full-stack - requires optional agents)
+```
+
+**Test Suite Results**:
+```
+✓ Found workflows: simple full-stack standard
+✓ simple workflow is valid
+✓ standard workflow is valid
+✓ Workflow show command works
+✓ Workflow parsing works
+✓ Dependency analyzer created 2 batches
+✓ CLI detected: claude-code
+✓ Found 12 agents (4 core + 8 optional)
+
+=== All Tests Passed! ===
+```
+
+### Design Patterns Established
+
+1. **Command-Based CLI**: `workflow-parser.sh <command> [args]` pattern
+2. **Environment Export**: Parse workflows into shell variables for easy access
+3. **Comprehensive Validation**: Multi-level validation (syntax, types, references)
+4. **Self-Documenting Code**: Each function has clear purpose and error messages
+5. **Test-Driven Verification**: Automated test suite ensures reliability
+
+### Learnings for Future Phases
+
+1. **yq Power**: yq provides robust YAML querying (JQ for YAML)
+2. **Dynamic Variables**: Bash allows `export "${var_name}=${value}"` for dynamic variable creation
+3. **Validation Layers**: Syntax → Types → References → Business Logic
+4. **CLI UX**: Colorized output significantly improves readability
+5. **Test Coverage**: Comprehensive tests catch edge cases early
+
+### Workflow System Features
+
+**Capabilities**:
+- ✅ List all available workflows
+- ✅ Validate workflow configurations
+- ✅ Show workflow details (phases, retry policies)
+- ✅ Parse workflows to environment variables
+- ✅ Check agent existence before execution
+- ✅ Support for core + optional agents
+- ✅ Flexible retry policies per phase
+
+**Validation Checks**:
+- ✅ YAML syntax validity
+- ✅ Required fields presence (name, phases)
+- ✅ Field type correctness (array, object, integer)
+- ✅ Agent reference validation
+- ✅ Positive integer constraints
+- ✅ Non-empty array constraints
+
+### Known Limitations (To Address in Future Phases)
+
+1. **No Workflow Inheritance**: Can't extend workflows from base templates
+2. **No Conditional Phases**: Can't skip phases based on story attributes
+3. **No Phase Parallelization**: All phases run sequentially within a story
+4. **No Workflow Variables**: Can't parameterize workflows (e.g., test timeout values)
+
+### Time Spent
+
+Estimated: 1.5 hours (within 1-2 hour estimate for Phase 3)
+
+---
+
+*Next: Phase 4 - Merge Strategy (conflict resolution)*
