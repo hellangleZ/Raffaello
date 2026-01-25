@@ -1,283 +1,546 @@
-# Ralph Parallel - Multi-Agent PRD Execution System
+# Ralph Parallel
+
+**Multi-Agent Ralph** - A next-generation autonomous agent system for parallel PRD execution.
 
 > **English** | [中文](#中文版本)
 
-A next-generation autonomous agent system that executes PRD user stories in parallel, with proper multi-agent orchestration.
+Ralph Parallel solves two fundamental problems of the original Ralph:
+1. **Parallel Execution** - Execute multiple user stories simultaneously instead of sequentially
+2. **Subagent Utilization** - Properly leverage specialized agents (planner, coder, reviewer, tester)
 
-## Status: Phase 1 Complete ✅
+## Status: Phase 4 Complete ✅
 
-**Current Version**: Development (Phase 1 of 6)
+**Current Version**: Development (Phase 4 of 6 - 67% complete)
 
 ### Completed
-- ✅ Project directory structure
-- ✅ CLI detection and abstraction layer (Claude Code + Codex support)
-- ✅ Unified agent API for spawning and managing agents
-- ✅ Dynamic agent loading (core + optional agents)
-- ✅ 4 core agent instruction files (planner, coder, reviewer, tester)
+- ✅ Phase 1: Project skeleton and CLI adaptation
+- ✅ Phase 2: Core parallel execution engine
+- ✅ Phase 3: Workflow system with YAML parsing
+- ✅ Phase 4: Smart merge strategy and conflict resolution
 
 ### Next Phase
-Phase 2: Core parallel execution engine
+Phase 5: Documentation and Examples
+
+## Quick Start
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/ralph-parallel
+cd ralph-parallel
+
+# 2. Ensure dependencies are installed
+brew install jq yq  # JSON and YAML parsing
+
+# 3. Create your PRD
+cp prd.json.example prd.json
+# Edit prd.json with your user stories
+
+# 4. Run Ralph Parallel
+./ralph.sh
+```
+
+See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
+
+## Why Ralph Parallel?
+
+### Original Ralph (Sequential)
+```
+Iteration 1: Agent → Story 1 → passes:true (30 min)
+Iteration 2: Agent → Story 2 → passes:true (30 min)
+Iteration 3: Agent → Story 3 → passes:true (30 min)
+Total Time: 90 minutes
+```
+
+### Ralph Parallel (Parallel)
+```
+           ┌→ Agent A → Story 1 → passes:true ┐
+ralph.sh ──┼→ Agent B → Story 2 → passes:true ├→ Auto-merge
+           └→ Agent C → Story 3 → passes:true ┘
+Total Time: 30 minutes (3x faster!)
+```
 
 ## Key Features
 
 ### 🚀 Parallel Execution
-Execute multiple user stories concurrently (vs sequential in original Ralph):
-```
-           ┌→ Agent A → Story 1 → ✓
-ralph.sh ──┼→ Agent B → Story 2 → ✓  ⇒ Auto-merge
-           └→ Agent C → Story 3 → ✓
-```
+- Execute up to 3 stories simultaneously
+- Smart dependency analysis (DAG-based)
+- Independent git branches per story
+- Automatic merging on completion
 
 ### 🤖 Multi-Agent Orchestration
-Each story goes through specialized phases:
-```
-Story → planner → coder → reviewer → tester → ✓
-```
+Each story is managed by an orchestrator with 4 specialized agents:
+- **Planner** - Creates implementation plans
+- **Coder** - Implements code following TDD
+- **Reviewer** - Reviews code for quality and security
+- **Tester** - Runs E2E tests and validates
 
-### 🔄 Dual CLI Support
-Works with both Claude Code and Codex:
-- **Claude Code**: Uses Task system (~/.claude/tasks/)
-- **Codex**: Uses Multi-agents API (spawn_agent, wait, close_agent)
+### 🔀 Intelligent Conflict Resolution
+Three-tier resolution strategy:
+- **LOW** severity → Auto-merge (simple conflicts)
+- **MEDIUM** severity → AI resolver (import conflicts, formatting)
+- **HIGH** severity → Manual review (logic conflicts)
 
-### 🎯 Dynamic Agent System
-- **Core agents** (built-in): planner, coder, reviewer, tester
-- **Optional agents** (from ~/.claude/agents/ or ~/.codex/agents/):
-  - frontend-coder, backend-coder, architect, security-reviewer, etc.
-  - Auto-discovered and loaded when referenced in workflows
+### 📋 Flexible Workflows
+Three built-in workflows + custom workflow support:
+- **simple** - Fast (coder + tester only)
+- **standard** - Balanced (all 4 agents)
+- **full-stack** - Complete (includes optional specialists)
+
+### 🔧 CLI Compatibility
+Works with both:
+- Claude Code (via Task tool)
+- Codex (via Multi-agents API)
 
 ## Project Structure
 
 ```
 ralph-parallel/
+├── ralph.sh                 # Main parallel execution engine
+├── orchestrator.sh          # Single-story phase management
+├── merge-stories.sh         # Smart git merge system
+├── prd.json                 # Your PRD file
+├── progress.txt             # Execution log
 ├── lib/
-│   ├── detect-cli.sh          # CLI detection (Claude Code/Codex)
-│   ├── agent-api.sh           # Unified agent spawning API
-│   └── load-agents.sh         # Dynamic agent discovery
+│   ├── detect-cli.sh        # CLI detection (Claude Code/Codex)
+│   ├── agent-api.sh         # Unified agent API
+│   ├── dependency-analyzer.sh  # DAG builder
+│   ├── workflow-parser.sh   # YAML workflow parser
+│   ├── conflict-analyzer.sh # Conflict severity grading
+│   └── load-agents.sh       # Agent discovery
 ├── agents/
-│   ├── planner.md             # Planning specialist
-│   ├── coder.md               # Implementation specialist (TDD)
-│   ├── reviewer.md            # Code review specialist
-│   └── tester.md              # E2E testing specialist
-├── workflows/                 # (Phase 3)
-│   ├── simple.yaml
-│   ├── standard.yaml
-│   └── full-stack.yaml
-├── ralph.sh                   # (Phase 2) Main parallel loop
-├── orchestrator.sh            # (Phase 2) Per-story phase manager
-└── docs/                      # (Phase 5)
-    ├── ARCHITECTURE.md
-    └── WORKFLOWS.md
+│   ├── planner.md           # Planning agent
+│   ├── coder.md             # Implementation agent
+│   ├── reviewer.md          # Code review agent
+│   ├── tester.md            # Testing agent
+│   └── conflict-resolver.md # Conflict resolution agent
+├── workflows/
+│   ├── simple.yaml          # Fast workflow
+│   ├── standard.yaml        # Balanced workflow
+│   └── full-stack.yaml      # Complete workflow
+└── docs/
+    ├── DESIGN.md            # Complete design documentation
+    ├── WORKFLOWS.md         # Workflow system guide
+    ├── ARCHITECTURE.md      # Architecture deep-dive
+    └── COMPARISON.md        # vs Original Ralph
 ```
 
-## Testing
+## PRD Format
+
+```json
+{
+  "projectName": "My Project",
+  "branchName": "main",
+  "userStories": [
+    {
+      "id": "US001",
+      "title": "User Authentication",
+      "description": "Implement user login and registration",
+      "workflow": "standard",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "US002",
+      "title": "Dashboard UI",
+      "description": "Create user dashboard",
+      "workflow": "simple",
+      "dependencies": ["US001"],
+      "passes": false
+    }
+  ]
+}
+```
+
+### Key Fields
+
+- **id** - Unique story identifier
+- **title** - Brief story title
+- **description** - Detailed requirements
+- **workflow** - Which workflow to use (simple/standard/full-stack)
+- **dependencies** - Array of story IDs this depends on
+- **passes** - Set to false initially, Ralph sets to true when complete
+
+## How It Works
+
+### 1. Dependency Analysis
+Ralph analyzes your PRD and builds a dependency graph:
+```bash
+./lib/dependency-analyzer.sh prd.json
+```
+
+Stories are grouped into batches where each batch contains independent stories.
+
+### 2. Parallel Execution
+Ralph executes batches sequentially, stories within batch in parallel:
+```bash
+Batch 1: US001, US002, US003 (parallel)
+Batch 2: US004, US005 (parallel, depend on US001)
+Batch 3: US006 (depends on US004, US005)
+```
+
+### 3. Story Orchestration
+For each story, an orchestrator manages 4 phases:
+```bash
+Story US001:
+  Phase 1: planner   → Create plan.md
+  Phase 2: coder     → Implement code + tests
+  Phase 3: reviewer  → Review for quality/security
+  Phase 4: tester    → Run E2E tests
+```
+
+### 4. Smart Merging
+After all stories in a batch complete, Ralph merges them:
+```bash
+./merge-stories.sh
+# Automatically handles conflicts using 3-tier strategy
+```
+
+## Workflows
+
+### Simple Workflow (Fastest)
+```yaml
+name: simple
+phases:
+  - coder
+  - tester
+```
+Use for: Bug fixes, simple features, low-risk changes
+
+### Standard Workflow (Recommended)
+```yaml
+name: standard
+phases:
+  - planner
+  - coder
+  - reviewer
+  - tester
+```
+Use for: Most user stories, new features, refactoring
+
+### Full-Stack Workflow (Complete)
+```yaml
+name: full-stack
+phases:
+  - planner
+  - architect           # Optional
+  - frontend-coder      # Optional
+  - backend-coder       # Optional
+  - reviewer
+  - security-reviewer   # Optional
+  - ui-tester          # Optional
+  - integration-tester # Optional
+```
+Use for: Complex features, multi-layer changes, critical paths
+
+See [WORKFLOWS.md](docs/WORKFLOWS.md) for custom workflow creation.
+
+## Conflict Resolution
+
+Ralph uses a three-tier strategy:
+
+### Tier 1: Auto-Merge (LOW Severity)
+Automatically resolves:
+- Whitespace conflicts
+- Formatting differences
+- Simple text conflicts (<5% of file)
+
+### Tier 2: AI Resolver (MEDIUM Severity)
+AI resolves:
+- Import conflicts (merge both)
+- Configuration merges (combine keys)
+- Adjacent function additions
+- Documentation conflicts
+
+### Tier 3: Manual Review (HIGH Severity)
+Requires human intervention:
+- Logic conflicts (function body changes)
+- Large conflicts (>20% of file)
+- Complex business logic
+
+Ralph will pause and provide a detailed conflict report for manual resolution.
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Maximum parallel stories (default: 3)
+export MAX_PARALLEL_STORIES=3
+
+# Communication directory (default: /tmp/ralph-parallel)
+export AGENT_COMM_DIR=/tmp/ralph-parallel
+
+# Main branch name (default: main)
+export MAIN_BRANCH=main
+```
 
 ### CLI Detection
+
+Ralph automatically detects your CLI:
 ```bash
-./lib/detect-cli.sh
-# Output:
-# Detected CLI: claude-code
-# Multi-agents support: ✓ Enabled
-# Agent directory: /Users/xxx/.claude/agents
+# Claude Code
+claude --version
+# → Uses Task tool
+
+# Codex
+codex --version
+# → Uses Multi-agents API
 ```
 
-### Agent Discovery
+## Commands
+
+### Main Commands
 ```bash
-./lib/load-agents.sh
-# Output:
-# Core Agents:
-#   - planner
-#   - coder
-#   - reviewer
-#   - tester
-# Optional Agents:
-#   - code-reviewer
-#   - security-reviewer
-#   - architect
-#   ...
-# Total Available: 12
+./ralph.sh                    # Run parallel execution
+./merge-stories.sh            # Merge story branches
 ```
 
-## Design Highlights
-
-### 1. CLI Abstraction
-Single interface works with both Claude Code and Codex:
+### Utility Commands
 ```bash
-spawn_agent "planner" "Plan story US001"
-# ⇒ Internally calls either:
-#   - Claude Code: echo "$prompt" | claude --print
-#   - Codex: codex with spawn_agent API
+# Analyze dependencies
+./lib/dependency-analyzer.sh prd.json
+
+# List workflows
+./lib/workflow-parser.sh list
+
+# Validate workflow
+./lib/workflow-parser.sh validate standard
+
+# Analyze conflicts
+./lib/conflict-analyzer.sh analyze
+
+# Run tests
+./test-workflows.sh
 ```
 
-### 2. File-Based Communication
-Agents communicate via files in `$AGENT_COMM_DIR`:
-- `plan.md` - Planner → Coder
-- `review-approved.md` - Reviewer → Orchestrator
-- `.planner-success` - Success markers
-
-### 3. Three-Tier Conflict Resolution
-- **LOW**: Auto-merge (different files)
-- **MEDIUM**: AI resolver (simple conflicts)
-- **HIGH**: Manual review (complex logic conflicts)
-
-## Comparison: Original Ralph vs Ralph Parallel
+## Comparison with Original Ralph
 
 | Feature | Original Ralph | Ralph Parallel |
 |---------|---------------|----------------|
-| Execution | Sequential (1 story at a time) | Parallel (max 3 concurrent) |
-| Agents | Single agent repeated N times | Multi-agent orchestration |
-| Phases | None (direct implementation) | 4 phases (plan→code→review→test) |
+| Execution Mode | Sequential | Parallel |
+| Agent Count | 1 (reused) | N (simultaneous) |
 | Subagents | Not used | Fully utilized |
-| Conflicts | None (sequential) | Smart 3-tier resolution |
-| Speed | Slow (serial) | Fast (parallel) |
-| Complexity | Low | Medium-High |
+| Speed | Slow | 2-3x faster |
+| Complexity | Low | Medium |
+| Conflict Handling | N/A (sequential) | Smart 3-tier system |
+| Workflow System | None | YAML-based |
+| Best For | Small projects | Large projects |
 
-## Next Steps (Development Roadmap)
+See [COMPARISON.md](docs/COMPARISON.md) for detailed analysis.
 
-- **Phase 2**: Implement ralph.sh (parallel loop) and orchestrator.sh
-- **Phase 3**: Implement workflow system with YAML parsing
-- **Phase 4**: Implement merge strategy and conflict resolution
-- **Phase 5**: Complete documentation
-- **Phase 6**: End-to-end testing with real PRD
+## Requirements
+
+- **Bash**: 3.2+ (macOS compatible)
+- **jq**: JSON parsing (`brew install jq`)
+- **yq**: YAML parsing (`brew install yq`)
+- **git**: Version control
+- **Claude Code** or **Codex**: AI CLI
+
+## Limitations
+
+### Current Limitations
+1. **Parallel limit**: Max 3 stories to avoid API rate limits
+2. **Manual conflicts**: High-severity conflicts require human intervention
+3. **No cross-story communication**: Stories can't coordinate during execution
+4. **File-level granularity**: Conflict detection at file level
+
+### Planned Improvements
+- Token cost optimization (use Haiku for planner/reviewer)
+- Cross-story file locking
+- Finer-grained conflict detection
+- Rollback support for failed merges
+
+## Troubleshooting
+
+### Stories Stuck in Progress
+```bash
+# Check agent communication directory
+ls -la /tmp/ralph-parallel/
+
+# Check for success markers
+ls -la /tmp/ralph-parallel/US001/.coder-success
+```
+
+### Merge Conflicts
+```bash
+# View conflict analysis
+./lib/conflict-analyzer.sh analyze
+
+# Check specific file severity
+./lib/conflict-analyzer.sh severity src/api/users.ts
+
+# Manual resolution
+git checkout main
+git merge story-US001
+# Resolve conflicts
+git add .
+git commit
+```
+
+### Workflow Validation Failed
+```bash
+# Check available agents
+./lib/load-agents.sh
+
+# List available workflows
+./lib/workflow-parser.sh list
+
+# Validate specific workflow
+./lib/workflow-parser.sh validate my-workflow
+```
+
+## Examples
+
+See [examples/](examples/) directory for:
+- Simple TODO app PRD
+- E-commerce platform PRD
+- API service PRD
+- Full-stack application PRD
+
+## Contributing
+
+Contributions welcome! Areas for improvement:
+- Additional conflict resolution strategies
+- New workflow templates
+- Performance optimizations
+- Better error reporting
+- Cross-CLI compatibility
+
+## Documentation
+
+- [QUICKSTART.md](QUICKSTART.md) - Get started in 5 minutes
+- [DESIGN.md](docs/DESIGN.md) - Complete design documentation
+- [WORKFLOWS.md](docs/WORKFLOWS.md) - Workflow system guide
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Architecture deep-dive
+- [COMPARISON.md](docs/COMPARISON.md) - vs Original Ralph
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details
+
+## Credits
+
+Built on the foundation of the original Ralph autonomous agent system.
+
+Inspired by:
+- Claude Code's Task tool
+- Codex's Multi-agents API
+- Modern CI/CD parallel execution patterns
+- Git's merge strategies
+
+## Support
+
+- GitHub Issues: [Report bugs](https://github.com/yourusername/ralph-parallel/issues)
+- Discussions: [Ask questions](https://github.com/yourusername/ralph-parallel/discussions)
+- Documentation: [Read the docs](docs/)
 
 ---
 
 # 中文版本
 
-> [English](#ralph-parallel---multi-agent-prd-execution-system) | **中文**
+> [English](#ralph-parallel) | **中文**
 
-新一代自主代理系统，支持并行执行 PRD 用户故事，具备完整的多代理编排能力。
+**Multi-Agent Ralph** - 新一代并行执行 PRD 的自主代理系统
 
-## 状态：Phase 1 完成 ✅
+Ralph Parallel 解决了原始 Ralph 的两个根本问题：
+1. **并行执行** - 同时执行多个用户故事而非串行
+2. **子代理利用** - 正确利用专业化代理（planner、coder、reviewer、tester）
 
-**当前版本**：开发中（6 个阶段中的第 1 阶段）
+## 状态：Phase 4 完成 ✅
+
+**当前版本**：开发中（6 个阶段的第 4 阶段 - 67% 完成）
 
 ### 已完成
-- ✅ 项目目录结构
-- ✅ CLI 检测和抽象层（支持 Claude Code 和 Codex）
-- ✅ 统一的代理 API，用于生成和管理代理
-- ✅ 动态代理加载（核心代理 + 可选代理）
-- ✅ 4 个核心代理指令文件（planner、coder、reviewer、tester）
+- ✅ Phase 1：项目骨架和 CLI 适配
+- ✅ Phase 2：核心并行执行引擎
+- ✅ Phase 3：带 YAML 解析的工作流系统
+- ✅ Phase 4：智能合并策略和冲突解决
 
 ### 下一阶段
-Phase 2：核心并行执行引擎
+Phase 5：文档和示例
+
+## 快速开始
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/yourusername/ralph-parallel
+cd ralph-parallel
+
+# 2. 确保依赖已安装
+brew install jq yq  # JSON 和 YAML 解析
+
+# 3. 创建你的 PRD
+cp prd.json.example prd.json
+# 编辑 prd.json 添加你的用户故事
+
+# 4. 运行 Ralph Parallel
+./ralph.sh
+```
+
+查看 [QUICKSTART.md](QUICKSTART.md) 获取详细设置说明。
+
+## 为什么选择 Ralph Parallel？
+
+### 原始 Ralph（串行）
+```
+迭代 1: 代理 → 故事 1 → passes:true (30 分钟)
+迭代 2: 代理 → 故事 2 → passes:true (30 分钟)
+迭代 3: 代理 → 故事 3 → passes:true (30 分钟)
+总时间: 90 分钟
+```
+
+### Ralph Parallel（并行）
+```
+           ┌→ 代理 A → 故事 1 → passes:true ┐
+ralph.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
+           └→ 代理 C → 故事 3 → passes:true ┘
+总时间: 30 分钟 (快 3 倍!)
+```
 
 ## 核心特性
 
 ### 🚀 并行执行
-同时执行多个用户故事（而非原 Ralph 的串行）：
-```
-           ┌→ 代理 A → 故事 1 → ✓
-ralph.sh ──┼→ 代理 B → 故事 2 → ✓  ⇒ 自动合并
-           └→ 代理 C → 故事 3 → ✓
-```
+- 同时执行最多 3 个故事
+- 智能依赖分析（基于 DAG）
+- 每个故事独立的 git 分支
+- 完成后自动合并
 
 ### 🤖 多代理编排
-每个故事经过专门的阶段：
-```
-故事 → planner → coder → reviewer → tester → ✓
-```
+每个故事由编排器管理 4 个专业代理：
+- **Planner** - 创建实现计划
+- **Coder** - 遵循 TDD 实现代码
+- **Reviewer** - 审查代码质量和安全性
+- **Tester** - 运行 E2E 测试和验证
 
-### 🔄 双 CLI 支持
-同时支持 Claude Code 和 Codex：
-- **Claude Code**：使用 Task 系统（~/.claude/tasks/）
-- **Codex**：使用 Multi-agents API（spawn_agent、wait、close_agent）
+### 🔀 智能冲突解决
+三层解决策略：
+- **LOW** 严重性 → 自动合并（简单冲突）
+- **MEDIUM** 严重性 → AI 解决器（导入冲突、格式化）
+- **HIGH** 严重性 → 人工审查（逻辑冲突）
 
-### 🎯 动态代理系统
-- **核心代理**（内置）：planner、coder、reviewer、tester
-- **可选代理**（从 ~/.claude/agents/ 或 ~/.codex/agents/ 加载）：
-  - frontend-coder、backend-coder、architect、security-reviewer 等
-  - 当在工作流中引用时自动发现和加载
+### 📋 灵活的工作流
+三个内置工作流 + 自定义工作流支持：
+- **simple** - 快速（仅 coder + tester）
+- **standard** - 平衡（所有 4 个代理）
+- **full-stack** - 完整（包含可选专家）
 
-## 项目结构
+### 🔧 CLI 兼容性
+同时支持：
+- Claude Code（通过 Task 工具）
+- Codex（通过 Multi-agents API）
 
-```
-ralph-parallel/
-├── lib/
-│   ├── detect-cli.sh          # CLI 检测（Claude Code/Codex）
-│   ├── agent-api.sh           # 统一代理生成 API
-│   └── load-agents.sh         # 动态代理发现
-├── agents/
-│   ├── planner.md             # 规划专家
-│   ├── coder.md               # 实现专家（TDD）
-│   ├── reviewer.md            # 代码审查专家
-│   └── tester.md              # E2E 测试专家
-├── workflows/                 # （Phase 3）
-│   ├── simple.yaml
-│   ├── standard.yaml
-│   └── full-stack.yaml
-├── ralph.sh                   # （Phase 2）主并行循环
-├── orchestrator.sh            # （Phase 2）单故事阶段管理器
-└── docs/                      # （Phase 5）
-    ├── ARCHITECTURE.md
-    └── WORKFLOWS.md
-```
+## 文档
 
-## 测试
+- [QUICKSTART.md](QUICKSTART.md) - 5 分钟快速开始
+- [DESIGN.md](docs/DESIGN.md) - 完整设计文档
+- [WORKFLOWS.md](docs/WORKFLOWS.md) - 工作流系统指南
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - 架构深度解析
+- [COMPARISON.md](docs/COMPARISON.md) - 与原始 Ralph 对比
 
-### CLI 检测
-```bash
-./lib/detect-cli.sh
-# 输出：
-# Detected CLI: claude-code
-# Multi-agents support: ✓ Enabled
-# Agent directory: /Users/xxx/.claude/agents
-```
+## 许可证
 
-### 代理发现
-```bash
-./lib/load-agents.sh
-# 输出：
-# Core Agents:
-#   - planner
-#   - coder
-#   - reviewer
-#   - tester
-# Optional Agents:
-#   - code-reviewer
-#   - security-reviewer
-#   - architect
-#   ...
-# Total Available: 12
-```
+MIT License - 查看 [LICENSE](LICENSE) 了解详情
 
-## 设计亮点
+---
 
-### 1. CLI 抽象
-单一接口同时支持 Claude Code 和 Codex：
-```bash
-spawn_agent "planner" "Plan story US001"
-# ⇒ 内部调用：
-#   - Claude Code: echo "$prompt" | claude --print
-#   - Codex: codex with spawn_agent API
-```
-
-### 2. 基于文件的通信
-代理通过 `$AGENT_COMM_DIR` 中的文件通信：
-- `plan.md` - Planner → Coder
-- `review-approved.md` - Reviewer → Orchestrator
-- `.planner-success` - 成功标记
-
-### 3. 三层冲突解决
-- **LOW**：自动合并（不同文件）
-- **MEDIUM**：AI 解决器（简单冲突）
-- **HIGH**：人工审查（复杂逻辑冲突）
-
-## 对比：原 Ralph vs Ralph Parallel
-
-| 特性 | 原 Ralph | Ralph Parallel |
-|------|---------|----------------|
-| 执行方式 | 串行（一次一个故事） | 并行（最多 3 个并发） |
-| 代理 | 单代理重复 N 次 | 多代理编排 |
-| 阶段 | 无（直接实现） | 4 个阶段（plan→code→review→test） |
-| 子代理 | 未使用 | 充分利用 |
-| 冲突 | 无（串行） | 智能 3 层解决 |
-| 速度 | 慢（串行） | 快（并行） |
-| 复杂度 | 低 | 中-高 |
-
-## 下一步（开发路线图）
-
-- **Phase 2**：实现 ralph.sh（并行循环）和 orchestrator.sh
-- **Phase 3**：实现带 YAML 解析的工作流系统
-- **Phase 4**：实现合并策略和冲突解决
-- **Phase 5**：完成文档
-- **Phase 6**：使用真实 PRD 进行端到端测试
+**Ralph Parallel** - 自主代理，并行执行 🚀

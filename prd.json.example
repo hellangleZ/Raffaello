@@ -1,0 +1,86 @@
+{
+  "projectName": "Todo Application",
+  "branchName": "main",
+  "userStories": [
+    {
+      "id": "US001",
+      "title": "Create Task",
+      "description": "Users should be able to create a new task with a title and description. The task should be saved to local storage and displayed in the task list.",
+      "workflow": "simple",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "US002",
+      "title": "List Tasks",
+      "description": "Display all tasks in a list view. Each task should show its title, description, and completion status. The list should update in real-time when tasks are added, updated, or deleted.",
+      "workflow": "simple",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "US003",
+      "title": "Mark Task Complete",
+      "description": "Users should be able to mark a task as complete/incomplete by clicking a checkbox. Completed tasks should be visually distinct (e.g., strikethrough text).",
+      "workflow": "simple",
+      "dependencies": ["US001", "US002"],
+      "passes": false
+    },
+    {
+      "id": "US004",
+      "title": "Delete Task",
+      "description": "Users should be able to delete a task. A confirmation dialog should appear before deletion. The task should be removed from both the UI and local storage.",
+      "workflow": "standard",
+      "dependencies": ["US001", "US002"],
+      "passes": false
+    },
+    {
+      "id": "US005",
+      "title": "Filter Tasks",
+      "description": "Add filter buttons to show: All tasks, Active tasks (incomplete), or Completed tasks. The filter should update the displayed task list without modifying the underlying data.",
+      "workflow": "standard",
+      "dependencies": ["US002", "US003"],
+      "passes": false
+    },
+    {
+      "id": "US006",
+      "title": "Task Counter",
+      "description": "Display a counter showing the number of active (incomplete) tasks. The counter should update in real-time as tasks are added, completed, or deleted.",
+      "workflow": "simple",
+      "dependencies": ["US002", "US003"],
+      "passes": false
+    },
+    {
+      "id": "US007",
+      "title": "Clear Completed",
+      "description": "Add a button to delete all completed tasks at once. The button should only be visible when there are completed tasks. Show confirmation before bulk deletion.",
+      "workflow": "standard",
+      "dependencies": ["US003", "US004"],
+      "passes": false
+    },
+    {
+      "id": "US008",
+      "title": "Edit Task",
+      "description": "Users should be able to edit an existing task's title and description. Double-clicking a task should enable edit mode. Changes should be saved to local storage.",
+      "workflow": "standard",
+      "dependencies": ["US001", "US002"],
+      "passes": false
+    },
+    {
+      "id": "US009",
+      "title": "Task Persistence",
+      "description": "Ensure all tasks persist across browser sessions using local storage. Tasks should be loaded on app startup and saved whenever tasks are created, updated, or deleted.",
+      "workflow": "simple",
+      "dependencies": ["US001", "US002", "US003", "US004", "US008"],
+      "passes": false
+    },
+    {
+      "id": "US010",
+      "title": "UI Polish",
+      "description": "Add CSS styling for a clean, modern UI. Include hover effects, smooth transitions, responsive layout for mobile devices, and proper spacing/alignment.",
+      "workflow": "simple",
+      "dependencies": ["US001", "US002", "US003", "US004", "US005", "US008"],
+      "passes": false
+    }
+  ]
+}
