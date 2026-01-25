@@ -38,16 +38,33 @@ Story ID: $story_id
 Communication Directory: $AGENT_COMM_DIR/$story_id"
 
   if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code: Use stdin for prompt
-    # Task tool manages agent lifecycle automatically
+    # Claude Code: Use Task tool (spawns managed background task)
+    # NOTE: Claude Code manages agent lifecycle automatically via Task system
+    # We cannot track PIDs because claude CLI spawns its own background processes
     mkdir -p "$AGENT_COMM_DIR/$story_id"
+    local prompt_file="$AGENT_COMM_DIR/$story_id/${agent_name}-prompt.txt"
     local output_file="$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt"
 
-    echo "$full_prompt" | claude --print > "$output_file" 2>&1 &
-    local agent_pid=$!
+    # Write prompt to file
+    echo "$full_prompt" > "$prompt_file"
 
-    # Return agent ID (using PID as identifier for Claude Code)
-    echo "cc-$agent_pid"
+    # Run claude synchronously (it will spawn its own background task)
+    # Capture the task ID from the output
+    local task_output
+    task_output=$(cd "$AGENT_COMM_DIR/$story_id" && claude --print < "$prompt_file" 2>&1)
+
+    # Extract task ID from output (format: "Command running in background with ID: <id>")
+    local task_id
+    task_id=$(echo "$task_output" | grep -oE "ID: [a-f0-9]+" | cut -d' ' -f2)
+
+    if [[ -z "$task_id" ]]; then
+      # If no task ID found, claude might have run synchronously (old version)
+      echo "$task_output" > "$output_file"
+      echo "cc-sync"
+    else
+      # Return task ID as agent ID
+      echo "cc-task-$task_id"
+    fi
 
   elif [[ "$cli" == "codex" ]]; then
     # Codex: Use spawn_agent API
@@ -88,11 +105,16 @@ wait_for_agents() {
   local cli=$(detect_cli)
 
   if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code: Extract PIDs and wait
+    # Claude Code: Wait for task completion using TaskOutput
     for agent_id in "$@"; do
-      if [[ "$agent_id" =~ ^cc-([0-9]+)$ ]]; then
-        local pid="${BASH_REMATCH[1]}"
-        wait "$pid" 2>/dev/null || true
+      if [[ "$agent_id" =~ ^cc-task-([a-f0-9]+)$ ]]; then
+        local task_id="${BASH_REMATCH[1]}"
+        # Use claude task output command to wait for completion
+        # This is a synchronous wait (blocks until task completes)
+        claude task output "$task_id" > /dev/null 2>&1 || true
+      elif [[ "$agent_id" == "cc-sync" ]]; then
+        # Synchronous execution, already complete
+        :
       fi
     done
 
@@ -121,10 +143,10 @@ close_agent() {
   local agent_id=$1
 
   if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code: Kill process if still running
-    if [[ "$agent_id" =~ ^cc-([0-9]+)$ ]]; then
-      local pid="${BASH_REMATCH[1]}"
-      kill "$pid" 2>/dev/null || true
+    # Claude Code: Task cleanup (if needed)
+    if [[ "$agent_id" =~ ^cc-task-([a-f0-9]+)$ ]]; then
+      # Tasks are auto-managed by Claude Code, no explicit cleanup needed
+      :
     fi
 
   elif [[ "$cli" == "codex" ]]; then
