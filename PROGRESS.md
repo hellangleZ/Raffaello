@@ -114,4 +114,116 @@ Estimated: 1.5 hours (within 1-2 hour estimate for Phase 1)
 
 ---
 
-*Next: Phase 2 - Core Parallel Engine*
+## Phase 2: Core Parallel Engine ✅
+
+**Date**: 2026-01-25
+**Status**: Complete
+
+### What Was Implemented
+
+1. **Main Parallel Loop** (`ralph.sh`)
+   - Reads PRD and identifies incomplete stories
+   - Calls dependency analyzer to create execution plan
+   - Executes stories in batches (max 3 concurrent per batch)
+   - Tracks background processes for each story
+   - Calls merge-stories.sh after all stories complete
+   - Colorized logging for better UX
+   - **Prerequisites**: Checks for jq, yq, and CLI availability
+
+2. **Story Orchestrator** (`orchestrator.sh`)
+   - Manages execution phases for a single story
+   - Loads workflow configuration from YAML files
+   - Executes each phase sequentially with retry logic
+   - Spawns agents for each phase using unified API
+   - Updates PRD with story status (passes: true/false)
+   - Creates git commits for completed stories
+   - **Phase validation**: Checks agent existence before execution
+
+3. **Dependency Analyzer** (`lib/dependency-analyzer.sh`)
+   - Builds DAG from story dependencies in prd.json
+   - Identifies parallelizable stories (independent batches)
+   - Returns execution plan as JSON: `{batches:[[...],[...]], unassigned:[]}`
+   - Detects circular dependencies
+   - **Bash 3.2 compatible**: Uses temp files instead of associative arrays
+   - **Tested**: ✅ Correctly analyzes test PRD with 3 stories
+
+4. **Branch Merge Manager** (`merge-stories.sh`)
+   - Merges all story-* branches back to main
+   - Attempts fast-forward merge first (cleanest)
+   - Falls back to regular merge if fast-forward fails
+   - Detects merge conflicts and reports them
+   - Deletes successfully merged branches
+   - **Phase 2 limitation**: Manual conflict resolution (Phase 4 will add AI resolver)
+
+5. **Workflow Configurations** (3 YAML files)
+   - `workflows/simple.yaml` - Coder + Tester only (2 phases)
+   - `workflows/standard.yaml` - All 4 core agents (4 phases)
+   - `workflows/full-stack.yaml` - Core + 4 optional agents (8 phases)
+   - Each includes retry_policy with max_attempts per phase
+
+### Files Created
+
+```
+ralph-parallel/
+├── ralph.sh                         # Main parallel loop (180 lines)
+├── orchestrator.sh                  # Story phase manager (210 lines)
+├── merge-stories.sh                 # Branch merge manager (150 lines)
+├── prd.json                         # Test PRD with 3 stories
+├── lib/
+│   └── dependency-analyzer.sh       # DAG builder (182 lines, bash 3.2 compatible)
+└── workflows/
+    ├── simple.yaml                  # 2-phase workflow
+    ├── standard.yaml                # 4-phase workflow
+    └── full-stack.yaml              # 8-phase workflow
+```
+
+### Testing Results
+
+**Dependency Analyzer** (with test PRD):
+```json
+{
+  "batches": [
+    ["US001", "US002"],  // Batch 1: Can run in parallel
+    ["US003"]            // Batch 2: Depends on US001 and US002
+  ],
+  "unassigned": []
+}
+```
+
+**Workflow Validation**:
+- ✅ simple.yaml - 2 phases (coder, tester)
+- ✅ standard.yaml - 4 phases (planner, coder, reviewer, tester)
+- ✅ full-stack.yaml - 8 phases (includes optional agents)
+
+### Design Patterns Established
+
+1. **Batch Execution**: Stories grouped by dependency levels, executed in waves
+2. **Background Process Tracking**: Uses bash job control (`&`, `wait -n`, PID arrays)
+3. **Colorized Logging**: BLUE (info), GREEN (success), YELLOW (warn), RED (error)
+4. **Git Branch Isolation**: Each story gets `story-{ID}` branch
+5. **YAML-Driven Workflows**: Phase order and retry policies in configuration files
+6. **Temp File State Management**: Bash 3.2 compatibility using temp files instead of associative arrays
+
+### Learnings for Future Phases
+
+1. **Bash 3.2 Limitations**: macOS ships with bash 3.2, avoid associative arrays (`declare -A`)
+2. **Process Substitution**: Use `< <(command)` for reading command output line-by-line
+3. **Concurrent Limits**: MAX_PARALLEL_STORIES=3 to avoid API rate limits
+4. **Merge Conflicts**: Phase 2 detects but doesn't resolve - Phase 4 will add AI resolver
+5. **Story Branch Naming**: `story-{ID}` convention makes them easy to identify and filter
+6. **PRD Updates**: `jq` can modify JSON in-place (create temp file, then `mv`)
+
+### Known Limitations (To Address in Future Phases)
+
+1. **No Conflict Resolution**: merge-stories.sh aborts on conflicts (Phase 4 will add AI resolver)
+2. **No Workflow Parser**: orchestrator.sh uses yq directly (Phase 3 will add dedicated parser)
+3. **Limited Error Recovery**: Failed stories don't automatically retry at orchestrator level
+4. **No Progress Persistence**: If ralph.sh crashes, must restart from beginning
+
+### Time Spent
+
+Estimated: 2.5 hours (within 2-3 hour estimate for Phase 2)
+
+---
+
+*Next: Phase 3 - Workflow System (add workflow-parser.sh)*

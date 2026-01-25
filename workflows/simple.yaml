@@ -1,0 +1,12 @@
+name: simple
+description: Simple workflow for straightforward stories - minimal phases
+
+phases:
+  - coder
+  - tester
+
+retry_policy:
+  coder:
+    max_attempts: 2
+  tester:
+    max_attempts: 1

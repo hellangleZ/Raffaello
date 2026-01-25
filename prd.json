@@ -1,0 +1,44 @@
+{
+  "projectName": "Ralph Parallel Test Project",
+  "version": "1.0.0",
+  "userStories": [
+    {
+      "id": "US001",
+      "title": "Add README file",
+      "description": "Create a basic README.md file with project description",
+      "acceptanceCriteria": [
+        "README.md file exists",
+        "Contains project name",
+        "Contains basic description"
+      ],
+      "dependencies": [],
+      "workflow": "simple",
+      "passes": false
+    },
+    {
+      "id": "US002",
+      "title": "Add license file",
+      "description": "Create MIT LICENSE file",
+      "acceptanceCriteria": [
+        "LICENSE file exists",
+        "Contains MIT license text"
+      ],
+      "dependencies": [],
+      "workflow": "simple",
+      "passes": false
+    },
+    {
+      "id": "US003",
+      "title": "Add contributing guide",
+      "description": "Create CONTRIBUTING.md with contribution guidelines",
+      "acceptanceCriteria": [
+        "CONTRIBUTING.md file exists",
+        "References README and LICENSE",
+        "Contains code style guidelines"
+      ],
+      "dependencies": ["US001", "US002"],
+      "workflow": "simple",
+      "passes": false
+    }
+  ]
+}

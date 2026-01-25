@@ -1,0 +1,18 @@
+name: standard
+description: Standard workflow with all core phases - recommended for most stories
+
+phases:
+  - planner
+  - coder
+  - reviewer
+  - tester
+
+retry_policy:
+  planner:
+    max_attempts: 1
+  coder:
+    max_attempts: 2
+  reviewer:
+    max_attempts: 2
+  tester:
+    max_attempts: 1

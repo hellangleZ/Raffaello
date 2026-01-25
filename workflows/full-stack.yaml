@@ -1,0 +1,30 @@
+name: full-stack
+description: Full-stack workflow with optional specialist agents
+
+phases:
+  - planner
+  - architect
+  - frontend-coder
+  - backend-coder
+  - reviewer
+  - security-reviewer
+  - ui-tester
+  - integration-tester
+
+retry_policy:
+  planner:
+    max_attempts: 1
+  architect:
+    max_attempts: 1
+  frontend-coder:
+    max_attempts: 2
+  backend-coder:
+    max_attempts: 2
+  reviewer:
+    max_attempts: 2
+  security-reviewer:
+    max_attempts: 1
+  ui-tester:
+    max_attempts: 2
+  integration-tester:
+    max_attempts: 2
