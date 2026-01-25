@@ -1,0 +1,46 @@
+# Test directories and files
+test-project/
+test-parallel/
+test-*-prd.json
+*.test.json
+
+# Agent communication directory
+/tmp/ralph-parallel/
+
+# Progress and state files (but keep execution markers)
+progress.txt
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Git branches (story branches are temporary)
+story-*/
+
+# Personal PRD files (users should create their own)
+prd.json
+my-*.json
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node modules (if any)
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Workflow retry files (temporary)
+*-retry-*.yaml
