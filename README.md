@@ -86,10 +86,10 @@ Three built-in workflows + custom workflow support:
 - **standard** - Balanced (all 4 agents)
 - **full-stack** - Complete (includes optional specialists)
 
-### 🔧 CLI Compatibility
-Works with both:
-- Claude Code (via Task tool)
-- Codex (via Multi-agents API)
+### 🔧 CLI Requirements
+Requires:
+- Claude Code CLI (installed and configured)
+- Agent execution via Task tool
 
 ## Project Structure
 
@@ -101,8 +101,8 @@ ralph-parallel/
 ├── prd.json                 # Your PRD file
 ├── progress.txt             # Execution log
 ├── lib/
-│   ├── detect-cli.sh        # CLI detection (Claude Code/Codex)
-│   ├── agent-api.sh         # Unified agent API
+│   ├── detect-cli.sh        # CLI detection
+│   ├── agent-api.sh         # Agent API
 │   ├── dependency-analyzer.sh  # DAG builder
 │   ├── workflow-parser.sh   # YAML workflow parser
 │   ├── conflict-analyzer.sh # Conflict severity grading

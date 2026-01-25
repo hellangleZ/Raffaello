@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Unified Agent API
-# Provides a consistent interface for spawning and managing agents across Claude Code and Codex
+# Agent API for Claude Code
+# Provides interface for spawning and managing agents using Claude Code CLI
 
 set -euo pipefail
 
@@ -15,7 +15,6 @@ mkdir -p "$AGENT_COMM_DIR"
 # Spawn an agent with a specific role
 # Args: $1=agent_name, $2=task_message, $3=story_id (optional)
 spawn_agent() {
-  local cli=$(detect_cli)
   local agent_name=$1
   local task_message=$2
   local story_id=${3:-"default"}
@@ -37,130 +36,59 @@ Task: $task_message
 Story ID: $story_id
 Communication Directory: $AGENT_COMM_DIR/$story_id"
 
-  if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code: Use Task tool (spawns managed background task)
-    # NOTE: Claude Code manages agent lifecycle automatically via Task system
-    # We cannot track PIDs because claude CLI spawns its own background processes
-    mkdir -p "$AGENT_COMM_DIR/$story_id"
-    local prompt_file="$AGENT_COMM_DIR/$story_id/${agent_name}-prompt.txt"
-    local output_file="$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt"
+  # Claude Code: Use Task tool (spawns managed background task)
+  # NOTE: Claude Code manages agent lifecycle automatically via Task system
+  mkdir -p "$AGENT_COMM_DIR/$story_id"
+  local prompt_file="$AGENT_COMM_DIR/$story_id/${agent_name}-prompt.txt"
+  local output_file="$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt"
 
-    # Write prompt to file
-    echo "$full_prompt" > "$prompt_file"
+  # Write prompt to file
+  echo "$full_prompt" > "$prompt_file"
 
-    # Run claude synchronously (it will spawn its own background task)
-    # Capture the task ID from the output
-    local task_output
-    task_output=$(cd "$AGENT_COMM_DIR/$story_id" && claude --print < "$prompt_file" 2>&1)
+  # Run claude synchronously (it will spawn its own background task)
+  # Capture the task ID from the output
+  local task_output
+  task_output=$(cd "$AGENT_COMM_DIR/$story_id" && claude --print < "$prompt_file" 2>&1)
 
-    # Extract task ID from output (format: "Command running in background with ID: <id>")
-    local task_id
-    task_id=$(echo "$task_output" | grep -oE "ID: [a-f0-9]+" | cut -d' ' -f2)
+  # Extract task ID from output (format: "Command running in background with ID: <id>")
+  local task_id
+  task_id=$(echo "$task_output" | grep -oE "ID: [a-f0-9]+" | cut -d' ' -f2)
 
-    if [[ -z "$task_id" ]]; then
-      # If no task ID found, claude might have run synchronously (old version)
-      echo "$task_output" > "$output_file"
-      echo "cc-sync"
-    else
-      # Return task ID as agent ID
-      echo "cc-task-$task_id"
-    fi
-
-  elif [[ "$cli" == "codex" ]]; then
-    # Codex: Use spawn_agent API
-    local agent_type="worker"
-
-    # Create temporary file for Codex input
-    mkdir -p "$AGENT_COMM_DIR/$story_id"
-    local codex_input="$AGENT_COMM_DIR/$story_id/${agent_name}-input.json"
-    cat > "$codex_input" <<EOF
-{
-  "tool": "spawn_agent",
-  "message": $(echo "$full_prompt" | jq -Rs .),
-  "agent_type": "$agent_type"
-}
-EOF
-
-    # Call Codex and capture agent_id
-    local response
-    response=$(codex < "$codex_input")
-
-    # Extract agent_id from response
-    local agent_id
-    agent_id=$(echo "$response" | jq -r '.agent_id // empty')
-
-    if [[ -z "$agent_id" ]]; then
-      echo "ERROR: Failed to spawn Codex agent" >&2
-      echo "Response: $response" >&2
-      exit 1
-    fi
-
-    echo "$agent_id"
+  if [[ -z "$task_id" ]]; then
+    # If no task ID found, claude might have run synchronously (old version)
+    echo "$task_output" > "$output_file"
+    echo "cc-sync"
+  else
+    # Return task ID as agent ID
+    echo "cc-task-$task_id"
   fi
 }
 
 # Wait for multiple agents to complete
 # Args: $@=agent_ids
 wait_for_agents() {
-  local cli=$(detect_cli)
-
-  if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code: Wait for task completion using TaskOutput
-    for agent_id in "$@"; do
-      if [[ "$agent_id" =~ ^cc-task-([a-f0-9]+)$ ]]; then
-        local task_id="${BASH_REMATCH[1]}"
-        # Use claude task output command to wait for completion
-        # This is a synchronous wait (blocks until task completes)
-        claude task output "$task_id" > /dev/null 2>&1 || true
-      elif [[ "$agent_id" == "cc-sync" ]]; then
-        # Synchronous execution, already complete
-        :
-      fi
-    done
-
-  elif [[ "$cli" == "codex" ]]; then
-    # Codex: Use wait API
-    local ids_json
-    ids_json=$(printf '%s\n' "$@" | jq -R . | jq -s .)
-
-    local codex_input
-    codex_input=$(cat <<EOF
-{
-  "tool": "wait",
-  "agent_ids": $ids_json
-}
-EOF
-)
-
-    codex <<< "$codex_input" > /dev/null
-  fi
+  # Claude Code: Wait for task completion using claude task output
+  for agent_id in "$@"; do
+    if [[ "$agent_id" =~ ^cc-task-([a-f0-9]+)$ ]]; then
+      local task_id="${BASH_REMATCH[1]}"
+      # Use claude task output command to wait for completion
+      # This is a synchronous wait (blocks until task completes)
+      claude task output "$task_id" > /dev/null 2>&1 || true
+    elif [[ "$agent_id" == "cc-sync" ]]; then
+      # Synchronous execution, already complete
+      :
+    fi
+  done
 }
 
 # Close/cleanup an agent
 # Args: $1=agent_id
 close_agent() {
-  local cli=$(detect_cli)
   local agent_id=$1
 
-  if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code: Task cleanup (if needed)
-    if [[ "$agent_id" =~ ^cc-task-([a-f0-9]+)$ ]]; then
-      # Tasks are auto-managed by Claude Code, no explicit cleanup needed
-      :
-    fi
-
-  elif [[ "$cli" == "codex" ]]; then
-    # Codex: Use close_agent API
-    local codex_input
-    codex_input=$(cat <<EOF
-{
-  "tool": "close_agent",
-  "agent_id": "$agent_id"
-}
-EOF
-)
-
-    codex <<< "$codex_input" > /dev/null
+  # Claude Code: Tasks are auto-managed, no explicit cleanup needed
+  if [[ "$agent_id" =~ ^cc-task-([a-f0-9]+)$ ]]; then
+    :
   fi
 }
 

@@ -14,8 +14,7 @@ CORE_AGENTS=("planner" "coder" "reviewer" "tester")
 # Discover optional agents from user's agent directory
 # Returns: List of agent names (without .md extension)
 discover_optional_agents() {
-  local cli=$(detect_cli)
-  local agent_dir=$(get_agent_dir "$cli")
+  local agent_dir=$(get_agent_dir)
 
   # List all .md files (excluding core agents)
   if [[ -d "$agent_dir" ]]; then
@@ -42,7 +41,6 @@ list_all_agents() {
 # Check if an agent exists (core or optional)
 agent_exists() {
   local agent_name=$1
-  local cli=$(detect_cli)
 
   # Check core agents first
   if [[ " ${CORE_AGENTS[@]} " =~ " ${agent_name} " ]]; then
@@ -52,7 +50,7 @@ agent_exists() {
   fi
 
   # Check optional agents in user directory
-  local agent_dir=$(get_agent_dir "$cli")
+  local agent_dir=$(get_agent_dir)
   local optional_agent_file="$agent_dir/${agent_name}.md"
   [[ -f "$optional_agent_file" ]]
 }
@@ -108,14 +106,13 @@ validate_workflow_agents() {
 # Args: $1=agent_name
 prepare_optional_agent() {
   local agent_name=$1
-  local cli=$(detect_cli)
 
   # Skip if it's a core agent
   if [[ " ${CORE_AGENTS[@]} " =~ " ${agent_name} " ]]; then
     return 0
   fi
 
-  local agent_dir=$(get_agent_dir "$cli")
+  local agent_dir=$(get_agent_dir)
   local source_file="$agent_dir/${agent_name}.md"
   local dest_file="$SCRIPT_DIR/../agents/${agent_name}.md"
 
