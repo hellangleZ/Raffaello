@@ -1,10 +1,25 @@
-# Ralph Parallel
+<div align="center">
 
-**Multi-Agent Ralph** - A next-generation autonomous agent system for parallel PRD execution.
+<img src="raffaello.png" alt="Raffaello" width="300"/>
+
+# Raffaello 🐢
+
+**The Parallel Execution Master** - Ralph's cooler, faster twin brother
+
+*Named after Raphael, the red-masked Ninja Turtle known for his speed and parallel sai strikes*
+
+[![GitHub](https://img.shields.io/github/license/hellangleZ/Raffaello)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 > **English** | [中文](#中文版本)
 
-Ralph Parallel solves two fundamental problems of the original Ralph:
+</div>
+
+---
+
+Raffaello is the **parallel execution version** of Ralph - a next-generation autonomous agent system that executes multiple user stories simultaneously instead of sequentially.
+
+**What Raffaello solves**:
 1. **Parallel Execution** - Execute multiple user stories simultaneously instead of sequentially
 2. **Subagent Utilization** - Properly leverage specialized agents (planner, coder, reviewer, tester)
 
@@ -25,8 +40,8 @@ Phase 5: Documentation and Examples
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/ralph-parallel
-cd ralph-parallel
+git clone https://github.com/hellangleZ/Raffaello
+cd Raffaello
 
 # 2. Ensure dependencies are installed
 brew install jq yq  # JSON and YAML parsing
@@ -874,11 +889,25 @@ Inspired by:
 
 # 中文版本
 
-> [English](#ralph-parallel) | **中文**
+<div align="center">
 
-**Multi-Agent Ralph** - 新一代并行执行 PRD 的自主代理系统
+<img src="raffaello.png" alt="Raffaello" width="300"/>
 
-Ralph Parallel 解决了原始 Ralph 的两个根本问题：
+# Raffaello 🐢
+
+**并行执行大师** - Ralph 更酷、更快的双胞胎兄弟
+
+*以忍者神龟中戴红色面罩的拉斐尔命名，以速度和双叉攻击闻名*
+
+> [English](#raffaello-) | **中文**
+
+</div>
+
+---
+
+**Raffaello** 是 Ralph 的**并行执行版本** - 新一代自主代理系统，同时执行多个用户故事而非串行。
+
+**Raffaello 解决的问题**：
 1. **并行执行** - 同时执行多个用户故事而非串行
 2. **子代理利用** - 正确利用专业化代理（planner、coder、reviewer、tester）
 
@@ -902,8 +931,8 @@ Ralph Parallel 解决了原始 Ralph 的两个根本问题：
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/yourusername/ralph-parallel
-cd ralph-parallel
+git clone https://github.com/hellangleZ/Raffaello
+cd Raffaello
 
 # 2. 确保依赖已安装
 brew install jq yq  # JSON 和 YAML 解析
