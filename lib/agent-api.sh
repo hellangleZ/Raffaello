@@ -45,10 +45,11 @@ Communication Directory: $AGENT_COMM_DIR/$story_id"
   # Write prompt to file
   echo "$full_prompt" > "$prompt_file"
 
-  # Run claude synchronously (it will spawn its own background task)
-  # Capture the task ID from the output
+  # Run claude with auto-accept permissions for autonomous execution
+  # The agent prompts already specify autonomous mode, but we need to allow file writes
+  # NOTE: Use --dangerously-skip-permissions flag for fully autonomous execution
   local task_output
-  task_output=$(cd "$AGENT_COMM_DIR/$story_id" && claude --print < "$prompt_file" 2>&1)
+  task_output=$(cd "$AGENT_COMM_DIR/$story_id" && claude --dangerously-skip-permissions --print < "$prompt_file" 2>&1)
 
   # Extract task ID from output (format: "Command running in background with ID: <id>")
   local task_id
