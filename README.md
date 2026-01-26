@@ -23,19 +23,6 @@ Raffaello is the **parallel execution version** of Ralph - a next-generation aut
 1. **Parallel Execution** - Execute multiple user stories simultaneously instead of sequentially
 2. **Subagent Utilization** - Properly leverage specialized agents (planner, coder, reviewer, tester)
 
-## Status: Phase 4 Complete ✅
-
-**Current Version**: Development (Phase 4 of 6 - 67% complete)
-
-### Completed
-- ✅ Phase 1: Project skeleton and CLI adaptation
-- ✅ Phase 2: Core parallel execution engine
-- ✅ Phase 3: Workflow system with YAML parsing
-- ✅ Phase 4: Smart merge strategy and conflict resolution
-
-### Next Phase
-Phase 5: Documentation and Examples
-
 ## Quick Start
 
 ```bash
@@ -460,15 +447,11 @@ export MAIN_BRANCH=main
 
 ### CLI Detection
 
-Ralph automatically detects your CLI:
+Ralph requires Claude Code CLI:
 ```bash
 # Claude Code
 claude --version
-# → Uses Task tool
-
-# Codex
-codex --version
-# → Uses Multi-agents API
+# → Uses Task tool for agent management
 ```
 
 ## Commands
@@ -875,7 +858,6 @@ Built on the foundation of the original Ralph autonomous agent system.
 
 Inspired by:
 - Claude Code's Task tool
-- Codex's Multi-agents API
 - Modern CI/CD parallel execution patterns
 - Git's merge strategies
 
@@ -910,22 +892,6 @@ Inspired by:
 **Raffaello 解决的问题**：
 1. **并行执行** - 同时执行多个用户故事而非串行
 2. **子代理利用** - 正确利用专业化代理（planner、coder、reviewer、tester）
-
-## 状态：Phase 5 完成 ✅
-
-**当前版本**：生产就绪（已完成全部测试）
-
-### 已完成
-- ✅ Phase 1：项目骨架和 CLI 适配
-- ✅ Phase 2：核心并行执行引擎
-- ✅ Phase 3：带 YAML 解析的工作流系统
-- ✅ Phase 4：智能合并策略和冲突解决
-- ✅ Phase 5：完整文档和端到端测试
-
-### 测试结果
-- ✅ 串行执行测试：100% 通过（3/3 stories）
-- ✅ 并行执行测试：100% 通过（4/4 stories）
-- ✅ 性能提升：3x 速度（并行 vs 串行）
 
 ## 快速开始
 
@@ -1028,6 +994,110 @@ ralph.sh 启动 Batch 1:
 但每个 orchestrator 内部的 phases 串行执行。
 ```
 
+## 项目结构
+
+```
+ralph-parallel/
+├── ralph.sh                 # 主并行执行引擎
+├── orchestrator.sh          # 单个 story 的 phase 管理
+├── merge-stories.sh         # 智能 git 合并系统
+├── prd.json                 # 你的 PRD 文件
+├── progress.txt             # 执行日志
+├── lib/
+│   ├── detect-cli.sh        # CLI 检测
+│   ├── agent-api.sh         # Agent API
+│   ├── dependency-analyzer.sh  # DAG 构建器
+│   ├── workflow-parser.sh   # YAML 工作流解析器
+│   ├── conflict-analyzer.sh # 冲突严重性分级
+│   └── load-agents.sh       # Agent 发现
+├── agents/
+│   ├── planner.md           # 规划 agent
+│   ├── coder.md             # 实现 agent
+│   ├── reviewer.md          # 代码审查 agent
+│   ├── tester.md            # 测试 agent
+│   └── conflict-resolver.md # 冲突解决 agent
+├── workflows/
+│   ├── simple.yaml          # 快速工作流
+│   ├── standard.yaml        # 平衡工作流
+│   └── full-stack.yaml      # 完整工作流
+└── docs/
+    ├── DESIGN.md            # 完整设计文档
+    ├── WORKFLOWS.md         # 工作流系统指南
+    ├── ARCHITECTURE.md      # 架构深入解析
+    └── COMPARISON.md        # 与原始 Ralph 的对比
+```
+
+## PRD 格式
+
+```json
+{
+  "projectName": "My Project",
+  "branchName": "main",
+  "userStories": [
+    {
+      "id": "US001",
+      "title": "User Authentication",
+      "description": "Implement user login and registration",
+      "workflow": "standard",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "US002",
+      "title": "Dashboard UI",
+      "description": "Create user dashboard",
+      "workflow": "simple",
+      "dependencies": ["US001"],
+      "passes": false
+    }
+  ]
+}
+```
+
+### 关键字段
+
+- **id** - 唯一的 story 标识符
+- **title** - 简短的 story 标题
+- **description** - 详细需求
+- **workflow** - 使用哪个工作流（simple/standard/full-stack）
+- **dependencies** - 此 story 依赖的 story ID 数组
+- **passes** - 初始设置为 false，Ralph 完成后设置为 true
+
+## 工作原理
+
+### 1. 依赖分析
+Ralph 分析你的 PRD 并构建依赖图：
+```bash
+./lib/dependency-analyzer.sh prd.json
+```
+
+Stories 被分组到批次中，每个批次包含独立的 stories。
+
+### 2. 并行执行
+Ralph 顺序执行批次，批次内的 stories 并行执行：
+```bash
+Batch 1: US001, US002, US003（并行）
+Batch 2: US004, US005（并行，依赖 US001）
+Batch 3: US006（依赖 US004, US005）
+```
+
+### 3. Story 编排
+对于每个 story，编排器管理 4 个 phase：
+```bash
+Story US001:
+  Phase 1: planner   → 创建 plan.md
+  Phase 2: coder     → 实现代码 + 测试
+  Phase 3: reviewer  → 审查质量/安全性
+  Phase 4: tester    → 运行 E2E 测试
+```
+
+### 4. 智能合并
+每个 story 完成后，Ralph 将 story 分支合并到 main：
+- 分析冲突严重性
+- 自动合并 LOW 严重性冲突
+- 为 MEDIUM 严重性冲突调用 AI 解决器
+- 标记 HIGH 严重性冲突供人工审查
+
 ## 核心特性
 
 ### 🚀 Story 级别的并行执行
@@ -1052,10 +1122,23 @@ ralph.sh 启动 Batch 1:
 - **HIGH** 严重性 → 人工审查（逻辑冲突）
 
 ### 📋 灵活的工作流
+三种预定义工作流：
+- **Simple**（5-10 分钟）- 快速修复和简单功能
+- **Standard**（10-20 分钟）- 推荐用于大多数 stories
+- **Full-Stack**（20-40 分钟）- 复杂功能和关键路径
 
-**重要**：工作流定义 story 内 phases 的**串行执行顺序**，不控制并行性（并行发生在 story 级别）。
+查看 [WORKFLOWS.md](docs/WORKFLOWS.md) 了解自定义工作流。
 
-#### 工作流如何工作
+### 🔧 CLI 要求
+仅支持：
+- Claude Code CLI（已安装并配置）
+- 通过 Task 工具执行 Agent
+
+## 项目结构
+
+**重要**：工作流定义单个 story 内 phases 的**串行执行顺序**。它们不控制并行性（并行发生在 story 级别）。
+
+### 工作流如何工作
 
 工作流只是按顺序执行的 phases 列表：
 
@@ -1078,10 +1161,245 @@ orchestrator.sh US001
   └─ 执行 phase 4: tester    (等待成功)
 ```
 
-### 🔧 CLI 要求
-仅支持：
-- Claude Code CLI（已安装并配置）
-- 通过 Task 工具执行 Agent
+如果任何 phase 失败，编排器会根据 `retry_policy` 重试，如果达到最大尝试次数则停止。
+
+### 简单工作流（最快）
+```yaml
+name: simple
+phases:
+  - coder      # 跳过规划，直接实现
+  - tester     # 运行测试验证
+
+retry_policy:
+  coder:
+    max_attempts: 2
+  tester:
+    max_attempts: 1
+```
+**适用于**：Bug 修复、简单功能、低风险变更
+
+**执行时间**：每个 story 约 5-10 分钟
+
+### 标准工作流（推荐）
+```yaml
+name: standard
+phases:
+  - planner    # 创建实现计划
+  - coder      # 按计划实现
+  - reviewer   # 审查代码质量和安全性
+  - tester     # 运行 E2E 测试
+
+retry_policy:
+  planner:
+    max_attempts: 1
+  coder:
+    max_attempts: 2    # 如果实现失败允许重试
+  reviewer:
+    max_attempts: 2    # 如果审查发现问题允许重试
+  tester:
+    max_attempts: 1
+```
+**适用于**：大多数用户故事、新功能、重构
+
+**执行时间**：每个 story 约 10-20 分钟
+
+### 全栈工作流（完整）
+```yaml
+name: full-stack
+phases:
+  - planner              # 创建计划
+  - architect            # 设计系统架构（可选 agent）
+  - frontend-coder       # 实现前端（可选 agent）
+  - backend-coder        # 实现后端（可选 agent）
+  - reviewer             # 代码审查
+  - security-reviewer    # 安全审计（可选 agent）
+  - ui-tester           # UI 测试（可选 agent）
+  - integration-tester  # 集成测试（可选 agent）
+
+retry_policy:
+  # ...（每个 phase 都有 max_attempts）
+```
+**适用于**：复杂功能、多层变更、关键路径
+
+**执行时间**：每个 story 约 20-40 分钟
+
+**注意**：可选 agents（architect、frontend-coder 等）必须存在于 `~/.claude/agents/` 目录中。如果找不到，工作流将失败。
+
+### 理解 retry_policy
+
+```yaml
+retry_policy:
+  coder:
+    max_attempts: 2
+```
+
+这意味着：
+- 尝试 1：运行 coder agent
+  - 如果**存在成功标记** → 继续下一个 phase
+  - 如果**没有成功标记** → 重试
+- 尝试 2：再次运行 coder agent
+  - 如果**存在成功标记** → 继续
+  - 如果**没有成功标记** → **Story 失败**，停止编排
+
+### 自定义工作流
+
+你可以创建自己的工作流 YAML 文件：
+
+```yaml
+# workflows/my-custom.yaml
+name: my-custom
+description: 我的项目的自定义工作流
+phases:
+  - planner
+  - my-custom-agent  # 必须存在于 ~/.claude/agents/my-custom-agent.md
+  - coder
+  - tester
+
+retry_policy:
+  planner:
+    max_attempts: 1
+  my-custom-agent:
+    max_attempts: 1
+  coder:
+    max_attempts: 2
+  tester:
+    max_attempts: 1
+```
+
+然后在你的 PRD 中引用它：
+```json
+{
+  "id": "US001",
+  "workflow": "my-custom",
+  ...
+}
+```
+
+查看 [WORKFLOWS.md](docs/WORKFLOWS.md) 了解自定义工作流创建。
+
+## 冲突解决
+
+三层解决策略基于冲突严重性：
+
+### 第 1 层：自动合并（LOW 严重性）
+**标准**：冲突比率 < 5%，无逻辑冲突
+
+**策略**：使用 `git checkout --ours` 或 `--theirs`
+
+**示例**：
+```diff
+<<<<<<< HEAD
+import { A } from './a';
+=======
+import { B } from './b';
+>>>>>>> story-US002
+
+解决后：
+import { A } from './a';
+import { B } from './b';
+```
+
+### 第 2 层：AI 解决器（MEDIUM 严重性）
+**标准**：冲突比率 5-20%，多个小冲突
+
+**策略**：生成 `conflict-resolver` agent
+
+**示例**：两个 story 都添加函数
+```javascript
+// 冲突：都添加函数
+<<<<<<< HEAD
+function validateEmail(email) { ... }
+=======
+function validatePassword(pwd) { ... }
+>>>>>>> story-US002
+
+// 解决后：保留两个
+function validateEmail(email) { ... }
+function validatePassword(pwd) { ... }
+```
+
+### 第 3 层：人工审查（HIGH 严重性）
+**标准**：冲突比率 > 20%，逻辑冲突
+
+**策略**：停止合并，通知用户
+
+**要求**：手动解决冲突并提交
+
+## 配置
+
+### 环境变量
+
+```bash
+# 最大并行 stories（默认：3）
+export MAX_PARALLEL_STORIES=3
+
+# Agent 通信目录（默认：/tmp/ralph-parallel）
+export AGENT_COMM_DIR="/tmp/ralph-parallel"
+
+# 工作流目录（默认：./workflows）
+export WORKFLOW_DIR="./workflows"
+```
+
+### CLI 检测
+
+系统自动检测 Claude Code CLI：
+
+```bash
+# 检测已安装的 CLI
+./lib/detect-cli.sh
+
+# 输出：claude-code
+# → 使用 Task 工具进行 agent 管理
+```
+
+## 命令
+
+### 主要命令
+
+```bash
+# 运行 Ralph Parallel（执行所有未完成的 stories）
+./ralph.sh
+
+# 运行特定 story
+./orchestrator.sh US001
+```
+
+### 实用命令
+
+```bash
+# 验证 PRD 格式
+jq empty prd.json  # 有效则无输出
+
+# 检查依赖关系
+./lib/dependency-analyzer.sh prd.json
+
+# 列出可用的 agents
+./lib/load-agents.sh
+
+# 列出可用的工作流
+ls workflows/*.yaml
+
+# 验证工作流格式
+yq eval workflows/standard.yaml
+
+# 清理临时文件
+rm -rf /tmp/ralph-parallel/*
+
+# 查看所有 story 分支
+git branch | grep story-
+```
+
+## 与原始 Ralph 对比
+
+| 功能 | 原始 Ralph | Ralph Parallel |
+|------|------------|----------------|
+| 执行模式 | 串行（一次一个 story） | 并行（同时最多 3 个 stories） |
+| 执行时间 | N × 时间/story | 时间/story（如果独立） |
+| 分支策略 | 单个工作分支 | 每个 story 独立分支 |
+| 冲突处理 | 手动 | 三层（AUTO/AI/MANUAL） |
+| Agent 角色 | 单角色 | 多角色（planner/coder/reviewer/tester） |
+| 工作流 | 固定 | 可配置 YAML |
+| 并发限制 | 1 | 可配置（默认 3） |
 
 ## 系统要求
 
@@ -1140,6 +1458,20 @@ git branch -d story-US001 story-US002 story-US003
 ```
 
 **预防**：运行 `./ralph.sh` 前确保在 `main` 分支
+
+## 限制
+
+### 当前限制
+1. **并行限制**：最多 3 个 stories 以避免 API 速率限制
+2. **手动冲突**：高严重性冲突需要人工干预
+3. **无跨 story 通信**：Stories 在执行期间无法协调
+4. **文件级粒度**：冲突检测在文件级别
+
+### 计划改进
+- Token 成本优化（对 planner/reviewer 使用 Haiku）
+- 跨 story 文件锁定
+- 更细粒度的冲突检测
+- 失败合并的回滚支持
 
 ## 故障排除和调试
 
@@ -1243,6 +1575,23 @@ e4f5g6h (main) 之前的提交
 git diff main...story-US001
 ```
 
+## 示例
+
+查看 [examples/](examples/) 目录了解：
+- 简单 TODO 应用 PRD
+- 电子商务平台 PRD
+- API 服务 PRD
+- 全栈应用 PRD
+
+## 贡献
+
+欢迎贡献！改进领域：
+- 额外的冲突解决策略
+- 新的工作流模板
+- 性能优化
+- 更好的错误报告
+- 跨 CLI 兼容性
+
 ## 文档
 
 - [QUICKSTART.md](QUICKSTART.md) - 5 分钟快速开始
@@ -1254,6 +1603,21 @@ git diff main...story-US001
 ## 许可证
 
 MIT License - 查看 [LICENSE](LICENSE) 了解详情
+
+## 致谢
+
+建立在原始 Ralph 自主代理系统的基础上。
+
+灵感来源：
+- Claude Code 的 Task 工具
+- 现代 CI/CD 并行执行模式
+- Git 的合并策略
+
+## 支持
+
+- GitHub Issues: [报告 bug](https://github.com/yourusername/ralph-parallel/issues)
+- Discussions: [提问](https://github.com/yourusername/ralph-parallel/discussions)
+- 文档: [阅读文档](docs/)
 
 ---
 

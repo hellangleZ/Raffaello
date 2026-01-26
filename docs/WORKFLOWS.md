@@ -66,7 +66,7 @@ Ralph Parallel uses YAML-based workflow configurations to define how user storie
 7. `ui-tester` - UI testing
 8. `integration-tester` - Integration testing
 
-**Requirements**: Requires optional agents in `~/.claude/agents/` or `~/.codex/agents/`:
+**Requirements**: Requires optional agents in `~/.claude/agents/`:
 - `architect`
 - `frontend-coder`
 - `backend-coder`
@@ -123,7 +123,6 @@ Human-readable description explaining when to use this workflow.
 Array of agent names to execute in sequence. Each phase must have a corresponding agent file in:
 - `agents/{phase}.md` (core agents)
 - `~/.claude/agents/{phase}.md` (optional agents)
-- `~/.codex/agents/{phase}.md` (optional agents)
 
 #### retry_policy (optional)
 Object mapping phase names to retry configuration:
@@ -370,7 +369,7 @@ Ralph Parallel 使用基于 YAML 的工作流配置来定义用户故事的执�
 7. `ui-tester` - UI 测试
 8. `integration-tester` - 集成测试
 
-**要求**：需要在 `~/.claude/agents/` 或 `~/.codex/agents/` 中有可选 agents
+**要求**：需要在 `~/.claude/agents/` 中有可选 agents
 
 ## 工作流配置格式
 

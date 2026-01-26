@@ -529,44 +529,32 @@ check_agent_success() {
 
 ### CLI Abstraction Layer
 
-**detect-cli.sh**: Detects which CLI is available
+**detect-cli.sh**: Detects Claude Code CLI
 ```bash
 detect_cli() {
   if command -v claude &> /dev/null; then
     echo "claude-code"
-  elif command -v codex &> /dev/null; then
-    echo "codex"
   else
-    echo "ERROR: No CLI found"
+    echo "ERROR: Claude Code CLI not found"
+    echo "Please install from https://claude.ai/code"
     exit 1
   fi
 }
 ```
 
-**agent-api.sh**: Unified interface
+**agent-api.sh**: Unified interface for Claude Code
 ```bash
 spawn_agent() {
-  local cli=$(detect_cli)
   local agent_name=$1
   local task_message=$2
   local story_id=$3
 
-  case "$cli" in
-    claude-code)
-      # Use Task tool
-      claude <<EOF
+  # Use Claude Code Task tool
+  claude <<EOF
 $(<"agents/${agent_name}.md")
 
 Task: $task_message
 EOF
-      ;;
-    codex)
-      # Use Multi-agents API
-      codex spawn_agent \
-        --message "$(<agents/${agent_name}.md)\n\nTask: $task_message" \
-        --agent_type "worker"
-      ;;
-  esac
 }
 ```
 

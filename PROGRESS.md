@@ -33,7 +33,7 @@
 
 4. **Dynamic Agent Loading** (`lib/load-agents.sh`)
    - Core agents: planner, coder, reviewer, tester
-   - Optional agent discovery from `~/.claude/agents/` or `~/.codex/agents/`
+   - Optional agent discovery from `~/.claude/agents/`
    - Workflow validation against available agents
    - **Tested**: ✅ Discovered 12 total agents (4 core + 8 optional)
 
@@ -850,7 +850,7 @@ ralph-parallel/
 ### Test Coverage
 
 **Core Functionality**:
-- ✅ CLI detection (claude-code/codex)
+- ✅ CLI detection (claude-code)
 - ✅ Dependency analysis (DAG building)
 - ✅ Workflow validation (simple, standard)
 - ✅ Workflow parsing (YAML to environment)
@@ -865,7 +865,7 @@ ralph-parallel/
 - ✅ Documentation complete
 
 **Not Tested** (requires AI CLI execution):
-- ⏭️ Actual story execution (needs Claude/Codex)
+- ⏭️ Actual story execution (needs Claude Code)
 - ⏭️ Agent spawning and communication
 - ⏭️ Git branching and merging
 - ⏭️ Conflict resolution (no conflicts created)
@@ -976,7 +976,7 @@ Estimated: 1 hour (within 1-2 hour estimate for Phase 6)
 1. **Parallel Execution**: 2-3x faster than sequential
 2. **Smart Conflict Resolution**: 3-tier (AUTO/AI/MANUAL)
 3. **Flexible Workflows**: YAML-based, customizable
-4. **CLI Agnostic**: Claude Code + Codex support
+4. **Claude Code Support**: Task tool-based agent management
 5. **Bash 3.2 Compatible**: Works on macOS out-of-box
 
 ### Ready for Production

@@ -30,7 +30,7 @@ ralph.sh ──┼→ Agent B → Story 2 → passes:true ├→ Auto-merge
 ### Proper Use of Subagents
 
 **Current Problem Analysis**:
-- Existing subagents (architect, planner, code-reviewer, etc.) exist in `~/.claude/agents/` or `~/.codex/agents/`
+- Existing subagents (architect, planner, code-reviewer, etc.) exist in `~/.claude/agents/`
 - But Ralph's CLAUDE.md instructions never call them
 - Ralph is a "single-role agent": only does implementation, no role separation
 
@@ -318,32 +318,17 @@ phases:
 detect_cli() {
   if command -v claude &> /dev/null; then
     echo "claude-code"
-  elif command -v codex &> /dev/null; then
-    echo "codex"
   else
-    echo "ERROR: Neither Claude Code nor Codex CLI found"
+    echo "ERROR: Claude Code CLI not found"
+    echo "Please install from https://claude.ai/code"
     exit 1
   fi
 }
 
 # Check multi-agents support
 check_multiagents_support() {
-  local cli=$1
-  if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code always supports Task tool
-    return 0
-  elif [[ "$cli" == "codex" ]]; then
-    # Check Codex config.toml
-    if grep -q "multi-agents = true" ~/.codex/config.toml 2>/dev/null; then
-      return 0
-    else
-      echo "Add to ~/.codex/config.toml:"
-      echo "[features]"
-      echo "multi-agents = true"
-      exit 1
-    fi
-  fi
-  return 1
+  # Claude Code always supports Task tool for agent management
+  return 0
 }
 ```
 
@@ -353,51 +338,25 @@ check_multiagents_support() {
 ```bash
 # Unified agent spawn interface
 spawn_agent() {
-  local cli=$1
-  local agent_name=$2
-  local task_message=$3
+  local agent_name=$1
+  local task_message=$2
   local agent_prompt_file="agents/${agent_name}.md"
 
-  if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code: Use Task tool
-    # Combine agent instructions and task message
-    local full_prompt="$(<$agent_prompt_file)\n\nTask: $task_message"
+  # Claude Code: Use Task tool
+  # Combine agent instructions and task message
+  local full_prompt="$(<$agent_prompt_file)\n\nTask: $task_message"
 
-    # Call Claude Code (Task tool auto-manages state)
-    claude --print <<EOF
+  # Call Claude Code (Task tool auto-manages state)
+  claude --print <<EOF
 $full_prompt
 EOF
-
-  elif [[ "$cli" == "codex" ]]; then
-    codex <<EOF
-{
-  "tool": "spawn_agent",
-  "message": "$(cat $agent_prompt_file)\n\nTask: $task_message",
-  "agent_type": "worker"
-}
-EOF
-  fi
 }
 
 # Wait for agents to complete
 wait_for_agents() {
-  local cli=$1
-  shift
-  local agent_ids=("$@")
-
-  if [[ "$cli" == "claude-code" ]]; then
-    # Claude Code: Task tool auto-manages, no explicit wait needed
-    :
-  elif [[ "$cli" == "codex" ]]; then
-    # Codex: Call wait API
-    local ids_json=$(printf '%s\n' "${agent_ids[@]}" | jq -R . | jq -s .)
-    codex <<EOF
-{
-  "tool": "wait",
-  "agent_ids": $ids_json
-}
-EOF
-  fi
+  # Claude Code: Task tool auto-manages completion
+  # No explicit wait needed as tasks are synchronous by default
+  :
 }
 ```
 
@@ -410,14 +369,7 @@ CORE_AGENTS=("planner" "coder" "reviewer" "tester")
 
 # Discover optional agents (from user config)
 discover_optional_agents() {
-  local cli=$1
-  local agent_dir=""
-
-  if [[ "$cli" == "claude-code" ]]; then
-    agent_dir="$HOME/.claude/agents"
-  elif [[ "$cli" == "codex" ]]; then
-    agent_dir="$HOME/.codex/agents"
-  fi
+  local agent_dir="$HOME/.claude/agents"
 
   # List all .md files (exclude core agents)
   if [[ -d "$agent_dir" ]]; then
@@ -434,7 +386,6 @@ discover_optional_agents() {
 # Validate workflow agents exist
 validate_workflow_agents() {
   local workflow_file=$1
-  local cli=$2
 
   # Read phases from workflow
   local phases=$(yq '.phases[]' "$workflow_file")
@@ -443,7 +394,7 @@ validate_workflow_agents() {
   local available_agents=("${CORE_AGENTS[@]}")
   while IFS= read -r agent; do
     available_agents+=("$agent")
-  done < <(discover_optional_agents "$cli")
+  done < <(discover_optional_agents)
 
   # Validate each phase's agent exists
   while IFS= read -r phase_agent; do
@@ -628,7 +579,6 @@ execute_workflow() {
 2. Write 3-story PRD (with dependencies)
 3. Test complete flow:
    - Claude Code environment
-   - Codex environment
    - Parallel execution
    - Conflict handling
    - Final verification
@@ -640,15 +590,10 @@ execute_workflow() {
 ### 1. Project Name: `ralph-parallel` ✅
 Simple and clear, highlights core feature
 
-### 2. Supported CLI: Both Claude Code and Codex ✅
+### 2. Supported CLI: Claude Code Only ✅
 - **Claude Code**: Uses Task tool (`~/.claude/tasks/`)
-- **Config Detection**: Auto-identify CLI type
-
-**Codex Multi-agents API Verification**:
-- ✅ API: `spawn_agent(message, agent_type)` → `{agent_id}`
-- ✅ API: `wait(agent_ids[])` → Wait for completion
-- ✅ API: `close_agent(agent_id)` → Cleanup resources
-- Documentation: `/Users/chilikevin/aml/burn-in-cceverywhere-codex/docs/multi-agents.md`
+- **Config Detection**: Auto-identify Claude Code CLI
+- **Agent Management**: Task tool provides built-in agent lifecycle management
 
 ### 3. Subagent Role Design: Predefined + Optional ✅
 
@@ -658,7 +603,7 @@ Simple and clear, highlights core feature
 3. `reviewer` - Code review specialist
 4. `tester` - Testing specialist
 
-**Optional Roles (Loaded from `~/.claude/agents/` or `~/.codex/agents/`)**:
+**Optional Roles (Loaded from `~/.claude/agents/`)**:
 - `frontend-coder` - Frontend development specialist
 - `backend-coder` - Backend development specialist
 - `api-coder` - API development specialist
@@ -766,7 +711,7 @@ ralph.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
 ### 正确使用 Subagents
 
 **当前问题分析**：
-- 现有 subagents（architect、planner、code-reviewer 等）存在于 `~/.claude/agents/` 或 `~/.codex/agents/`
+- 现有 subagents（architect、planner、code-reviewer 等）存在于 `~/.claude/agents/`
 - 但 Ralph 的 CLAUDE.md 指令从未调用它们
 - Ralph 是"单角色代理"：只做实现，不分角色
 
