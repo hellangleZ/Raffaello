@@ -53,7 +53,7 @@ Communication Directory: $AGENT_COMM_DIR/$story_id"
 
   # Extract task ID from output (format: "Command running in background with ID: <id>")
   local task_id
-  task_id=$(echo "$task_output" | grep -oE "ID: [a-f0-9]+" | cut -d' ' -f2)
+  task_id=$(echo "$task_output" | grep -oE "ID: [a-f0-9]+" | cut -d' ' -f2 || echo "")
 
   if [[ -z "$task_id" ]]; then
     # If no task ID found, claude might have run synchronously (old version)

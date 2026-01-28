@@ -4,6 +4,12 @@
 
 set -euo pipefail
 
+# Severity thresholds (configurable)
+CONFLICT_RATIO_HIGH_THRESHOLD=${CONFLICT_RATIO_HIGH_THRESHOLD:-20}    # >20% of file = HIGH
+CONFLICT_RATIO_MEDIUM_THRESHOLD=${CONFLICT_RATIO_MEDIUM_THRESHOLD:-5} # >5% of file = MEDIUM
+AVG_CONFLICT_SIZE_HIGH_THRESHOLD=${AVG_CONFLICT_SIZE_HIGH_THRESHOLD:-50} # >50 lines per conflict = HIGH
+MULTIPLE_CONFLICTS_THRESHOLD=${MULTIPLE_CONFLICTS_THRESHOLD:-3}       # >3 conflicts = MEDIUM
+
 # Severity levels
 SEVERITY_LOW="LOW"
 SEVERITY_MEDIUM="MEDIUM"
@@ -58,27 +64,27 @@ analyze_conflict_severity() {
     return 0
   fi
 
-  # HIGH: Too many conflicts (>20% of file)
-  if [[ $conflict_ratio -gt 20 ]]; then
+  # HIGH: Too many conflicts (>threshold% of file)
+  if [[ $conflict_ratio -gt $CONFLICT_RATIO_HIGH_THRESHOLD ]]; then
     echo "$SEVERITY_HIGH"
     return 0
   fi
 
-  # HIGH: Large conflict sections (>50 lines per conflict)
+  # HIGH: Large conflict sections (>threshold lines per conflict)
   local avg_conflict_size=$((conflict_lines / conflict_sections))
-  if [[ $avg_conflict_size -gt 50 ]]; then
+  if [[ $avg_conflict_size -gt $AVG_CONFLICT_SIZE_HIGH_THRESHOLD ]]; then
     echo "$SEVERITY_HIGH"
     return 0
   fi
 
-  # MEDIUM: Moderate conflicts (5-20% of file)
-  if [[ $conflict_ratio -gt 5 ]]; then
+  # MEDIUM: Moderate conflicts (threshold-20% of file)
+  if [[ $conflict_ratio -gt $CONFLICT_RATIO_MEDIUM_THRESHOLD ]]; then
     echo "$SEVERITY_MEDIUM"
     return 0
   fi
 
   # MEDIUM: Multiple small conflicts
-  if [[ $conflict_sections -gt 3 ]]; then
+  if [[ $conflict_sections -gt $MULTIPLE_CONFLICTS_THRESHOLD ]]; then
     echo "$SEVERITY_MEDIUM"
     return 0
   fi

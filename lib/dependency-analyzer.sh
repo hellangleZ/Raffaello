@@ -2,6 +2,7 @@
 # Dependency Analyzer - Analyzes story dependencies and creates execution plan
 # Builds a DAG and identifies parallelizable stories
 # Compatible with bash 3.2+
+# Optimized to minimize jq calls
 
 set -euo pipefail
 
@@ -25,16 +26,35 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 COMPLETED_FILE="$TMP_DIR/completed"
 IN_BATCH_FILE="$TMP_DIR/in_batch"
+DEPS_CACHE_FILE="$TMP_DIR/deps_cache"
 
-# Get all incomplete stories
+# Cache all stories data once (optimization)
+ALL_STORIES_DATA=$(jq -c '.userStories[]' "$PRD_FILE")
+
+# Get all incomplete stories (optimized)
 get_incomplete_stories() {
-  jq -r '.userStories[] | select(.passes == false) | .id' "$PRD_FILE"
+  echo "$ALL_STORIES_DATA" | jq -r 'select(.passes == false) | .id'
 }
 
-# Get dependencies for a story
+# Get dependencies for a story (cached)
 get_story_dependencies() {
   local story_id=$1
-  jq -r ".userStories[] | select(.id == \"$story_id\") | .dependencies[]?" "$PRD_FILE" 2>/dev/null || echo ""
+
+  # Check cache first
+  if [[ -f "$DEPS_CACHE_FILE" ]]; then
+    local cached
+    cached=$(grep "^${story_id}:" "$DEPS_CACHE_FILE" 2>/dev/null || echo "")
+    if [[ -n "$cached" ]]; then
+      echo "${cached#*:}"
+      return 0
+    fi
+  fi
+
+  # Get from data and cache it
+  local deps
+  deps=$(echo "$ALL_STORIES_DATA" | jq -r "select(.id == \"$story_id\") | .dependencies[]?" 2>/dev/null || echo "")
+  echo "${story_id}:${deps}" >> "$DEPS_CACHE_FILE"
+  echo "$deps"
 }
 
 # Mark a story as completed
@@ -71,10 +91,10 @@ build_execution_plan() {
     return
   fi
 
-  # Mark already completed stories
-  while IFS= read -r story; do
+  # Mark already completed stories (optimized - single jq call)
+  echo "$ALL_STORIES_DATA" | jq -r 'select(.passes == true) | .id' | while IFS= read -r story; do
     mark_completed "$story"
-  done < <(jq -r '.userStories[] | select(.passes == true) | .id' "$PRD_FILE")
+  done
 
   local batches='[]'
 

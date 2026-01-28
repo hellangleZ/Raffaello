@@ -12,35 +12,16 @@ source "$SCRIPT_DIR/lib/detect-cli.sh"
 source "$SCRIPT_DIR/lib/agent-api.sh"
 source "$SCRIPT_DIR/lib/conflict-analyzer.sh"
 
+# Source unified logging
+export LOG_PREFIX="MERGE"
+source "$SCRIPT_DIR/lib/logging.sh"
+
 # Configuration
 MAIN_BRANCH=${MAIN_BRANCH:-main}
 COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel}/merge"
 
 # Create communication directory
 mkdir -p "$COMM_DIR"
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-log_info() {
-  echo -e "${BLUE}[MERGE]${NC} $*"
-}
-
-log_success() {
-  echo -e "${GREEN}[MERGE]${NC} $*"
-}
-
-log_warn() {
-  echo -e "${YELLOW}[MERGE]${NC} $*"
-}
-
-log_error() {
-  echo -e "${RED}[MERGE]${NC} $*"
-}
 
 # Get all story branches
 get_story_branches() {
@@ -94,8 +75,9 @@ ai_resolve_conflicts() {
     return 0
   fi
 
-  # Check if there are MEDIUM severity conflicts
+  # Check if there are MEDIUM or HIGH severity conflicts
   local has_medium=false
+  local has_high=false
   while IFS= read -r file; do
     if [[ -z "$file" ]]; then
       continue
@@ -104,10 +86,19 @@ ai_resolve_conflicts() {
     local severity=$(analyze_conflict_severity "$file")
     if [[ "$severity" == "MEDIUM" ]]; then
       has_medium=true
-      break
+    elif [[ "$severity" == "HIGH" ]]; then
+      has_high=true
+      break  # If we have HIGH, no point using AI
     fi
   done <<< "$conflicted_files"
 
+  # HIGH severity conflicts need manual review, return error
+  if $has_high; then
+    log_warn "HIGH severity conflicts detected, manual review required"
+    return 1
+  fi
+
+  # No MEDIUM conflicts, nothing to do
   if ! $has_medium; then
     return 0
   fi

@@ -43,6 +43,66 @@ cp prd.json.example prd.json
 
 See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
 
+## Usage Instructions
+
+### Running Raffaello
+
+Raffaello reads `prd.json` from your **current directory** first, then falls back to the script directory if not found.
+
+**Recommended workflow**:
+```bash
+# 1. Create a project directory
+mkdir -p ~/projects/my-project
+cd ~/projects/my-project
+
+# 2. Copy or create your prd.json
+cp /path/to/prd.json .
+# OR generate using your PRD generator
+
+# 3. Run Raffaello
+/path/to/ralph-parallel/ralph.sh
+```
+
+**Important**: Raffaello will look for:
+- `prd.json` in current directory (priority)
+- `prd.json` in ralph-parallel directory (fallback)
+- `workflows/` directory for workflow definitions
+
+### PRD Field Compatibility
+
+Raffaello supports both naming conventions:
+- `projectName` (recommended) or `project` (legacy)
+- Both are accepted by the validator
+
+### Workflow Setup
+
+Each story requires a `workflow` field. If not specified, defaults to `standard`.
+
+**Ensure workflows exist**:
+```bash
+# Copy workflows to your project directory
+cp -r /path/to/ralph-parallel/workflows .
+```
+
+Available workflows:
+- `simple` - Fast (coder + tester only)
+- `standard` - Balanced (planner + coder + reviewer + tester)
+- `full-stack` - Complete (with optional specialists)
+
+### Git Repository Requirement
+
+Raffaello uses git branches to isolate work for each user story. Your project directory **must be a git repository**.
+
+**First-time setup**:
+```bash
+cd ~/projects/my-project
+git init
+git add .
+git commit -m "Initial commit"
+```
+
+Raffaello will offer to initialize git automatically if not found, with safety checks to prevent accidents.
+
 ## Why Ralph Parallel?
 
 ### Original Ralph (Sequential)
@@ -157,6 +217,48 @@ Three built-in workflows + custom workflow support:
 Requires:
 - Claude Code CLI (installed and configured)
 - Agent execution via Task tool
+
+## 🛡️ Safety Features
+
+### Git Initialization Protection
+
+Raffaello includes comprehensive safety checks to prevent accidental git initialization in dangerous locations.
+
+**Blocked locations**:
+- **Home directories**: `$HOME`, `/Users/username`, `/home/username`
+- **System directories**: `/`, `/usr`, `/var`, `/etc`, `/System`, `/Library`
+- **Critical paths**: `/bin`, `/boot`, `/lib`, `/opt`, `/proc`, `/root`, `/sbin`, `/sys`, `/tmp`
+- **Mount points**: `/mnt`, `/media`, `/srv`
+
+**Safety mechanisms**:
+1. **Pre-flight checks** - Detects and blocks dangerous paths before any git operation
+2. **Visual confirmation** - Shows current directory and files before initialization
+3. **Double confirmation** - Requires explicit "yes" answers (not just "y")
+4. **File count preview** - Shows how many files will be tracked before `git add`
+5. **Abort and cleanup** - Removes `.git` directory if user cancels at any step
+
+**Example warning screen**:
+```
+════════════════════════════════════════
+⚠️  GIT INITIALIZATION WARNING
+════════════════════════════════════════
+
+Current directory:
+  /Users/alice/projects/my-app
+
+This will:
+  1. Run: git init
+  2. Run: git add -A (stage ALL files in this directory)
+  3. Run: git commit -m 'Initial commit'
+
+Files in current directory:
+[shows first 10 files]
+
+Is this the CORRECT project directory? (yes/no)
+Type 'yes' to proceed, anything else to abort:
+```
+
+**Cross-platform support**: Safety checks work on both macOS and Linux.
 
 ## Project Structure
 

@@ -13,41 +13,49 @@ source "$PROJECT_ROOT/lib/detect-cli.sh"
 source "$PROJECT_ROOT/lib/agent-api.sh"
 source "$PROJECT_ROOT/lib/load-agents.sh"
 
+# Source unified logging
+export LOG_PREFIX="ORCHESTRATOR"
+source "$PROJECT_ROOT/lib/logging.sh"
+
 # Configuration
-PRD_FILE="${PRD_FILE:-$PROJECT_ROOT/prd.json}"
+# Try current directory first, then project root
+if [[ -f "prd.json" ]]; then
+  PRD_FILE="${PRD_FILE:-$(pwd)/prd.json}"
+else
+  PRD_FILE="${PRD_FILE:-$PROJECT_ROOT/prd.json}"
+fi
 WORKFLOWS_DIR="$PROJECT_ROOT/workflows"
 
 # Get story ID from argument
 STORY_ID=${1:-}
 
 if [[ -z "$STORY_ID" ]]; then
-  echo "ERROR: Story ID required"
+  log_error "Story ID required"
   echo "Usage: $0 <story_id>"
   exit 1
 fi
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Temporary file for retry policy
+RETRY_POLICY_FILE=$(mktemp)
 
-log_info() {
-  echo -e "${BLUE}[ORCHESTRATOR]${NC} $*"
+# Cleanup function
+cleanup() {
+  [[ -f "$RETRY_POLICY_FILE" ]] && rm -f "$RETRY_POLICY_FILE"
 }
 
-log_success() {
-  echo -e "${GREEN}[ORCHESTRATOR]${NC} $*"
-}
-
-log_error() {
-  echo -e "${RED}[ORCHESTRATOR]${NC} $*"
-}
+# Set up trap for cleanup
+trap cleanup EXIT INT TERM
 
 # Get story details from PRD
 get_story() {
-  jq ".userStories[] | select(.id == \"$STORY_ID\")" "$PRD_FILE"
+  local story
+  story=$(jq ".userStories[] | select(.id == \"$STORY_ID\")" "$PRD_FILE")
+  if [[ -z "$story" || "$story" == "null" ]]; then
+    log_error "Story not found in PRD: $STORY_ID"
+    log_error "Available stories: $(jq -r '.userStories[].id' "$PRD_FILE" | tr '\n' ' ')"
+    exit 1
+  fi
+  echo "$story"
 }
 
 # Get story workflow type (default: standard)
@@ -235,9 +243,6 @@ Phases: ${WORKFLOW_PHASES[*]}
 Co-Authored-By: Claude <noreply@anthropic.com>" || true
 
   log_success "Story $STORY_ID completed successfully!"
-
-  # Cleanup temp file
-  [[ -f "$RETRY_POLICY_FILE" ]] && rm -f "$RETRY_POLICY_FILE"
 }
 
 # Run main
