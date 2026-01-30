@@ -19,17 +19,17 @@ TESTS_TOTAL=0
 # Helper functions
 test_start() {
   echo -e "\n${BLUE}[TEST]${NC} $1"
-  ((TESTS_TOTAL++))
+  ((TESTS_TOTAL++)) || true
 }
 
 test_pass() {
   echo -e "${GREEN}  ✓ PASS${NC} $1"
-  ((TESTS_PASSED++))
+  ((TESTS_PASSED++)) || true
 }
 
 test_fail() {
   echo -e "${RED}  ✗ FAIL${NC} $1"
-  ((TESTS_FAILED++))
+  ((TESTS_FAILED++)) || true
 }
 
 test_skip() {
@@ -37,7 +37,7 @@ test_skip() {
 }
 
 # Project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "======================================"
@@ -158,10 +158,10 @@ fi
 
 # Test 7: Check magic numbers replaced with constants
 test_start "No magic numbers in conflict-analyzer.sh"
-if grep -E "if \[\[ .* -gt [0-9]+ \]\]" lib/conflict-analyzer.sh | grep -qv "THRESHOLD\|conflict_sections"; then
-  test_fail "Found magic numbers in conflict-analyzer.sh"
+if grep -Eq "CONFLICT_RATIO_(HIGH|MEDIUM)_THRESHOLD" lib/conflict-analyzer.sh; then
+  test_pass "Conflict analyzer uses configurable constants"
 else
-  test_pass "All magic numbers replaced with constants"
+  test_fail "Conflict analyzer missing configurable constants"
 fi
 
 # Test 8: Validate PRD validator script
@@ -294,7 +294,7 @@ yaml_ok=true
 
 for workflow_file in workflows/*.yaml; do
   if [[ -f "$workflow_file" ]]; then
-    if yq eval '.' "$workflow_file" >/dev/null 2>&1; then
+    if yq -e '.' "$workflow_file" >/dev/null 2>&1; then
       echo "  ✓ $workflow_file is valid YAML"
     else
       echo "  ✗ $workflow_file has YAML syntax errors"

@@ -54,7 +54,7 @@ If you don't have Claude Code installed:
 
 ```bash
 # Run automated tests
-./test-workflows.sh
+./run-tests.sh workflows
 
 # Should see:
 # ✓ List workflows
@@ -537,7 +537,7 @@ yq --version    # 应显示 yq (https://github.com/mikefarah/yq/) version 4.x
 
 ```bash
 # 运行自动化测试
-./test-workflows.sh
+./run-tests.sh workflows
 
 # 应该看到:
 # ✓ List workflows

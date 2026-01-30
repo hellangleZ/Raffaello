@@ -5,7 +5,7 @@
 运行自动化测试套件：
 
 ```bash
-./test-improvements.sh
+./run-tests.sh suite
 ```
 
 这会测试所有改进和bug修复（~20个测试，耗时<10秒）。
@@ -220,8 +220,8 @@ for example in examples/*.json; do
 done
 
 # 2. 运行已有的测试
-if [[ -f "test-workflows.sh" ]]; then
-  ./test-workflows.sh
+if [[ -f "tools/tests/test-workflows.sh" ]]; then
+  ./run-tests.sh workflows
 fi
 
 # 3. 验证文档中的示例
@@ -265,14 +265,14 @@ brew install bash
 cd /path/to/ralph-parallel
 
 # 运行测试
-./test-improvements.sh
+./run-tests.sh suite
 ```
 
 ### 测试失败：Permission denied
 
 ```bash
 # 添加执行权限
-chmod +x test-improvements.sh
+chmod +x tools/tests/test-improvements.sh
 chmod +x ralph.sh orchestrator.sh merge-stories.sh
 ```
 
@@ -294,7 +294,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq yq
       - name: Run tests
-        run: ./test-improvements.sh
+        run: ./run-tests.sh suite
 ```
 
 ## 测试清单
@@ -303,7 +303,7 @@ jobs:
 
 - [ ] 在项目根目录
 - [ ] 已安装 jq, yq, git
-- [ ] test-improvements.sh 有执行权限
+- [ ] tools/tests/test-improvements.sh 有执行权限
 - [ ] 主要脚本有执行权限
 - [ ] 有prd.json或prd.json.example
 
@@ -315,4 +315,4 @@ jobs:
 
 ---
 
-**建议**: 先运行 `./test-improvements.sh` 快速验证所有修复，然后再进行手动测试或集成测试。
+**建议**: 先运行 `./run-tests.sh suite` 快速验证所有修复，然后再进行手动测试或集成测试。

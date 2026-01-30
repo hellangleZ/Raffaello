@@ -90,7 +90,7 @@ Expected time: ~2 seconds
 
 ### Full Test Suite
 ```bash
-./test-improvements.sh
+./run-tests.sh suite
 ```
 Expected time: ~10 seconds
 

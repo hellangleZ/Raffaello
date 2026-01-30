@@ -156,7 +156,10 @@ validate_workflow() {
   fi
 
   # Check phases is an array
-  if ! yq -e '.phases | type == "!!seq"' "$workflow_file" > /dev/null 2>&1; then
+  # Note: yq implementations differ (mikefarah/yq uses "!!seq"; python yq uses "array").
+  local phases_type
+  phases_type=$(yq -r '.phases | type' "$workflow_file" 2>/dev/null || echo "")
+  if [[ "$phases_type" != "array" && "$phases_type" != "!!seq" ]]; then
     log_error "Workflow 'phases' must be an array"
     return 1
   fi
@@ -181,7 +184,9 @@ validate_workflow() {
   # Check retry_policy format (optional)
   if yq -e '.retry_policy' "$workflow_file" > /dev/null 2>&1; then
     # Validate retry_policy is an object
-    if ! yq -e '.retry_policy | type == "!!map"' "$workflow_file" > /dev/null 2>&1; then
+    local retry_type
+    retry_type=$(yq -r '.retry_policy | type' "$workflow_file" 2>/dev/null || echo "")
+    if [[ "$retry_type" != "object" && "$retry_type" != "!!map" ]]; then
       log_error "Workflow 'retry_policy' must be an object"
       return 1
     fi

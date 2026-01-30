@@ -1,6 +1,35 @@
-#!/bin/bash
-echo "=== Raffaello Quick Test ==="
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "=== Raffaello Test Runner ==="
 echo ""
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./run-tests.sh [quick|workflows|e2e|suite|all]
+
+Commands:
+  quick      Fast static checks (default)
+  workflows  Workflow/agent/dependency tests
+  e2e        End-to-end repo checks with test-project
+  suite      Full improvement suite (larger)
+  all        Run quick + workflows + e2e + suite
+EOF
+}
+
+MODE="${1:-quick}"
+case "$MODE" in
+  -h|--help|help) usage; exit 0 ;;
+  quick|workflows|e2e|suite|all) ;;
+  *) echo "Unknown mode: $MODE"; echo ""; usage; exit 2 ;;
+esac
+
+TESTS_DIR="$SCRIPT_DIR/tools/tests"
 
 # Test 1: Files exist
 echo "[1/8] Checking files..."
@@ -78,8 +107,51 @@ else
 fi
 
 echo ""
-echo "=== ✓ All Core Tests Passed ==="
+echo "=== ✓ Quick Checks Passed ==="
+
+run_workflows() {
+  if [[ -x "$TESTS_DIR/test-workflows.sh" ]]; then
+    "$TESTS_DIR/test-workflows.sh"
+  else
+    echo "✗ Missing $TESTS_DIR/test-workflows.sh"
+    exit 1
+  fi
+}
+
+run_e2e() {
+  if [[ -x "$TESTS_DIR/test-e2e.sh" ]]; then
+    "$TESTS_DIR/test-e2e.sh"
+  else
+    echo "✗ Missing $TESTS_DIR/test-e2e.sh"
+    exit 1
+  fi
+}
+
+run_suite() {
+  if [[ -x "$TESTS_DIR/test-improvements.sh" ]]; then
+    "$TESTS_DIR/test-improvements.sh"
+  else
+    echo "✗ Missing $TESTS_DIR/test-improvements.sh"
+    exit 1
+  fi
+}
+
+case "$MODE" in
+  quick) ;;
+  workflows) run_workflows ;;
+  e2e) run_e2e ;;
+  suite) run_suite ;;
+  all)
+    echo ""
+    run_workflows
+    echo ""
+    run_e2e
+    echo ""
+    run_suite
+    ;;
+esac
+
 echo ""
 echo "Next steps:"
-echo "  1. Run './ralph.sh' to test full execution"
-echo "  2. See TESTING.md for detailed test guide"
+echo "  - Run '/aml/raffaello/bin/ralph-start.sh --project-dir <DIR>' to execute stories"
+echo "  - See docs/RALPH-RUNBOOK.md for start → monitor → merge → finish"

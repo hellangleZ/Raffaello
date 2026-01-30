@@ -262,7 +262,7 @@ Estimated: 2.5 hours (within 2-3 hour estimate for Phase 2)
    - Troubleshooting section
    - Best practices
 
-4. **Test Suite** (`test-workflows.sh`)
+4. **Test Suite** (`run-tests.sh workflows`)
    - 8 comprehensive tests
    - Tests all workflow parser commands
    - Validates dependency analyzer
@@ -278,7 +278,7 @@ ralph-parallel/
 │   └── workflow-parser.sh          # 310 lines - YAML parser with CLI
 ├── docs/
 │   └── WORKFLOWS.md                # 350+ lines - Complete workflow guide
-├── test-workflows.sh               # 120 lines - Test suite
+├── tools/tests/test-workflows.sh   # Test suite (invoked via run-tests.sh workflows)
 └── workflows/
     └── full-stack.yaml             # Updated description
 ```
@@ -779,7 +779,7 @@ Estimated: 2 hours (within 1-2 hour estimate for Phase 5)
    - Mix of `simple` and `standard` workflows
    - All stories have `passes=false` initially
 
-3. **Automated E2E Test Suite** (`test-e2e.sh`)
+3. **Automated E2E Test Suite** (`run-tests.sh e2e`)
    - 10 comprehensive tests:
      1. Prerequisites check (jq, yq, git)
      2. CLI detection
@@ -837,7 +837,7 @@ Result: ✅ Correct (3 sequential batches)
 
 ```
 ralph-parallel/
-├── test-e2e.sh           # Automated E2E test suite (152 lines)
+├── tools/tests/test-e2e.sh          # Automated E2E test suite (invoked via run-tests.sh e2e)
 └── test-project/
     ├── .git/             # Git repository
     ├── index.html        # HTML structure (18 lines)
@@ -966,8 +966,8 @@ Estimated: 1 hour (within 1-2 hour estimate for Phase 6)
 - 50+ code examples
 
 **Testing**:
-- 8 workflow tests (test-workflows.sh)
-- 10 E2E tests (test-e2e.sh)
+- 8 workflow tests (run-tests.sh workflows)
+- 10 E2E tests (run-tests.sh e2e)
 - 1 example PRD (10 stories)
 - 1 test project (3 stories)
 
@@ -1036,4 +1036,3 @@ Ran ralph.sh with real test project and discovered/fixed 4 critical bugs:
 
 **Ralph Parallel** - Multi-agent PRD execution, architecture complete! 🚀
 (Agent integration layer needs completion for Claude Code)
-

@@ -551,7 +551,7 @@ cp path/to/ralph-parallel/prd.json .
 | Comparison guide | ❌ | ✅ (this doc) |
 | **Testing** | | |
 | Unit tests | ❌ | ✅ |
-| Integration tests | ❌ | ✅ (test-workflows.sh) |
+| Integration tests | ❌ | ✅ (run-tests.sh workflows) |
 | **Complexity** | | |
 | Lines of code | ~300 | ~2500 |
 | Number of files | 3 | 20+ |

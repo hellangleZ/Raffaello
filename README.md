@@ -586,7 +586,7 @@ claude --version
 ./lib/conflict-analyzer.sh analyze
 
 # Run tests
-./test-workflows.sh
+./run-tests.sh workflows
 ```
 
 ## Comparison with Original Ralph
