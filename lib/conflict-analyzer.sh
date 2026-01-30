@@ -31,7 +31,9 @@ analyze_conflict_severity() {
   fi
 
   # Count conflict markers
-  local conflict_sections=$(grep -c "^<<<<<<< " "$file" 2>/dev/null || echo 0)
+  local conflict_sections
+  conflict_sections=$(grep -c "^<<<<<<< " "$file" 2>/dev/null || true)
+  conflict_sections=${conflict_sections:-0}
 
   if [[ $conflict_sections -eq 0 ]]; then
     echo "NONE"
@@ -51,7 +53,9 @@ analyze_conflict_severity() {
   local conflict_ratio=$((conflict_sections * 100 / file_size))
 
   # Check for logic conflicts (function/class definitions in conflict sections)
-  local has_logic_conflict=$(grep -B2 "^<<<<<<< " "$file" | grep -c -E "(function|class|def |const |let |var |interface|type |struct |impl )" 2>/dev/null || echo 0)
+  local has_logic_conflict
+  has_logic_conflict=$(grep -B2 "^<<<<<<< " "$file" | grep -c -E "(function|class|def |const |let |var |interface|type |struct |impl )" 2>/dev/null || true)
+  has_logic_conflict=${has_logic_conflict:-0}
 
   # Check conflict content complexity
   local conflict_lines=$(awk '/^<<<<<<< /,/^>>>>>>> /' "$file" | wc -l | tr -d ' ')

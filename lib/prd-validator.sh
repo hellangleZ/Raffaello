@@ -107,7 +107,10 @@ validate_prd() {
     local workflow
     workflow=$(jq -r ".userStories[$idx].workflow // \"standard\"" "$prd_file")
     if [[ -n "$workflow" && "$workflow" != "null" ]]; then
-      local workflow_file="workflows/${workflow}.yaml"
+      # Workflows should resolve relative to the PRD file location.
+      local prd_dir
+      prd_dir=$(cd "$(dirname "$prd_file")" && pwd)
+      local workflow_file="$prd_dir/workflows/${workflow}.yaml"
       if [[ ! -f "$workflow_file" ]]; then
         echo "ERROR: Story $story_id references non-existent workflow: $workflow" >&2
         echo "  Expected file: $workflow_file" >&2

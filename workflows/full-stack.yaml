@@ -13,18 +13,18 @@ phases:
 
 retry_policy:
   planner:
-    max_attempts: 1
+    max_attempts: 3
   architect:
-    max_attempts: 1
+    max_attempts: 3
   frontend-coder:
-    max_attempts: 2
+    max_attempts: 3
   backend-coder:
-    max_attempts: 2
+    max_attempts: 3
   reviewer:
-    max_attempts: 2
+    max_attempts: 3
   security-reviewer:
-    max_attempts: 1
+    max_attempts: 3
   ui-tester:
-    max_attempts: 2
+    max_attempts: 3
   integration-tester:
-    max_attempts: 2
+    max_attempts: 3

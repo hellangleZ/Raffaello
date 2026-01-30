@@ -67,26 +67,26 @@ list_workflows() {
 # Get workflow name
 get_workflow_name() {
   local workflow_file=$1
-  yq '.name' "$workflow_file"
+  yq -r '.name' "$workflow_file"
 }
 
 # Get workflow description
 get_workflow_description() {
   local workflow_file=$1
-  yq '.description // ""' "$workflow_file"
+  yq -r '.description // ""' "$workflow_file"
 }
 
 # Get workflow phases as array
 get_workflow_phases() {
   local workflow_file=$1
-  yq '.phases[]' "$workflow_file"
+  yq -r '.phases[]' "$workflow_file"
 }
 
 # Get retry policy for a specific phase
 get_phase_max_attempts() {
   local workflow_file=$1
   local phase=$2
-  yq ".retry_policy.$phase.max_attempts // 1" "$workflow_file"
+  yq -r ".retry_policy.$phase.max_attempts // 1" "$workflow_file"
 }
 
 # Parse full workflow and export to environment
@@ -142,7 +142,7 @@ validate_workflow() {
   log_info "Validating workflow: $workflow_name"
 
   # Check required fields
-  local name=$(yq '.name' "$workflow_file")
+  local name=$(yq -r '.name' "$workflow_file")
   if [[ -z "$name" || "$name" == "null" ]]; then
     log_error "Workflow missing 'name' field"
     return 1
@@ -189,7 +189,7 @@ validate_workflow() {
     # Validate max_attempts are positive integers
     while IFS= read -r phase; do
       if yq -e ".retry_policy.$phase" "$workflow_file" > /dev/null 2>&1; then
-        local max_attempts=$(yq ".retry_policy.$phase.max_attempts" "$workflow_file")
+        local max_attempts=$(yq -r ".retry_policy.$phase.max_attempts" "$workflow_file")
         if [[ "$max_attempts" != "null" ]]; then
           if ! [[ "$max_attempts" =~ ^[1-9][0-9]*$ ]]; then
             log_error "Invalid max_attempts for $phase: $max_attempts (must be positive integer)"

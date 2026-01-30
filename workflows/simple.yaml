@@ -7,6 +7,6 @@ phases:
 
 retry_policy:
   coder:
-    max_attempts: 2
+    max_attempts: 3
   tester:
-    max_attempts: 1
+    max_attempts: 3

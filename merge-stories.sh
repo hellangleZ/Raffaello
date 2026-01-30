@@ -105,9 +105,37 @@ ai_resolve_conflicts() {
 
   log_info "Invoking AI conflict resolver for MEDIUM severity conflicts..."
 
+  # Prepare a default escalation report up-front so manual resolution always has context
+  # even if the agent fails to run or times out.
+  cat >"$COMM_DIR/conflict-escalation.md" <<EOF
+# Merge Conflict Escalation Report
+
+## Branch
+- Target: $MAIN_BRANCH
+
+## Conflicted Files
+$(echo "$conflicted_files" | sed 's/^/- /')
+
+## Recommendations
+- Resolve conflicts manually, then run: git add <files> && git commit
+
+EOF
+
   # Prepare conflict information
   local conflict_info
   conflict_info=$(analyze_all_conflicts 2>&1)
+
+  # Append analysis output to the escalation report for manual resolution.
+  if [[ -f "$COMM_DIR/conflict-escalation.md" ]]; then
+    {
+      echo "## Conflict Analysis"
+      echo
+      echo '```'
+      echo "$conflict_info"
+      echo '```'
+      echo
+    } >>"$COMM_DIR/conflict-escalation.md"
+  fi
 
   # Spawn conflict-resolver agent
   local cli=$(detect_cli)
@@ -133,7 +161,9 @@ Instructions:
   agent_id=$(spawn_agent "conflict-resolver" "$task_message" "merge")
 
   log_info "Waiting for conflict resolver agent..."
-  wait_for_agents "$agent_id"
+  if ! wait_for_agent "merge" "conflict-resolver" "$agent_id"; then
+    log_warn "Conflict resolver did not complete successfully (timeout or early exit)"
+  fi
 
   # Check if resolution succeeded
   if check_agent_success "merge" "conflict-resolver"; then
@@ -146,7 +176,9 @@ Instructions:
     # Check for escalation report
     if [[ -f "$COMM_DIR/conflict-escalation.md" ]]; then
       log_warn "Conflicts require manual review:"
-      cat "$COMM_DIR/conflict-escalation.md"
+      log_warn "Escalation report: $COMM_DIR/conflict-escalation.md"
+      # Keep console output short; file contains full context.
+      sed -n '1,120p' "$COMM_DIR/conflict-escalation.md" || true
     fi
 
     close_agent "$agent_id" 2>/dev/null || true
@@ -186,8 +218,10 @@ merge_branch() {
   log_warn "Merge conflict detected in $branch"
 
   # Get conflict analysis
-  local analysis_result
-  analyze_all_conflicts 2>&1 || analysis_result=$?
+  local analysis_output
+  analysis_output=$(analyze_all_conflicts 2>&1)
+  local analysis_result=$?
+  echo "$analysis_output"
 
   # Check severity
   if [[ ${analysis_result:-0} -eq 0 ]]; then
@@ -266,9 +300,9 @@ main() {
   for branch in $branches; do
     echo ""
     if merge_branch "$branch"; then
-      ((success_count++))
+      ((success_count++)) || true
     else
-      ((failed_count++))
+      ((failed_count++)) || true
       failed_branches+=("$branch")
     fi
   done

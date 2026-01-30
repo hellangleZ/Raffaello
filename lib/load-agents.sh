@@ -74,7 +74,7 @@ validate_workflow_agents() {
 
   # Read phases from workflow
   local phases
-  phases=$(yq '.phases[]' "$workflow_file" 2>/dev/null || echo "")
+  phases=$(yq -r '.phases[]' "$workflow_file" 2>/dev/null || echo "")
 
   if [[ -z "$phases" ]]; then
     echo "ERROR: No phases found in workflow: $workflow_file" >&2

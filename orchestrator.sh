@@ -2,7 +2,20 @@
 # Orchestrator - Manages execution phases for a single story
 # Loads workflow configuration and executes each phase with appropriate agents
 
+# Ensure we always run under bash even if invoked via sh/dash
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  exec /usr/bin/env bash "$0" "$@"
+fi
+
 set -euo pipefail
+
+# Fast fail if this script is syntactically broken in the current environment.
+# This helps diagnose cases where runtime output is misleading (e.g. parallel logs).
+if ! bash -n "$0" 2>/dev/null; then
+  echo "[ORCHESTRATOR] ERROR: bash syntax check failed for $0" >&2
+  bash -n "$0" >&2 || true
+  exit 2
+fi
 
 # Project root directory (inherited from ralph.sh via SCRIPT_DIR)
 # Do NOT redefine SCRIPT_DIR here to avoid path collision
@@ -24,7 +37,7 @@ if [[ -f "prd.json" ]]; then
 else
   PRD_FILE="${PRD_FILE:-$PROJECT_ROOT/prd.json}"
 fi
-WORKFLOWS_DIR="$PROJECT_ROOT/workflows"
+WORKFLOWS_DIR="$(cd "$(dirname "$PRD_FILE")" && pwd)/workflows"
 
 # Get story ID from argument
 STORY_ID=${1:-}
@@ -36,11 +49,11 @@ if [[ -z "$STORY_ID" ]]; then
 fi
 
 # Temporary file for retry policy
-RETRY_POLICY_FILE=$(mktemp)
+RETRY_POLICY_FILE=""
 
 # Cleanup function
 cleanup() {
-  [[ -f "$RETRY_POLICY_FILE" ]] && rm -f "$RETRY_POLICY_FILE"
+  [[ -n "$RETRY_POLICY_FILE" && -f "$RETRY_POLICY_FILE" ]] && rm -f "$RETRY_POLICY_FILE"
 }
 
 # Set up trap for cleanup
@@ -94,6 +107,31 @@ update_story_status() {
   log_success "Updated story $STORY_ID: passes = $passes"
 }
 
+append_run_feedback() {
+  local phase=$1
+  local comm_dir="$AGENT_COMM_DIR/$STORY_ID"
+  local feedback_file="$comm_dir/.restart-feedback.md"
+
+  {
+    echo "# Workflow restart feedback"
+    echo
+    echo "Failed phase: $phase"
+    echo "Timestamp: $(date -Is)"
+    echo
+    echo "## Recent phase output (head 40 + tail 80)"
+    if [[ -f "$comm_dir/${phase}-output.txt" ]]; then
+      echo "--- head ---"
+      head -n 40 "$comm_dir/${phase}-output.txt"
+      echo
+      echo "--- tail ---"
+      tail -n 80 "$comm_dir/${phase}-output.txt"
+    else
+      echo "(no ${phase}-output.txt)"
+    fi
+    echo
+  } >>"$feedback_file" 2>/dev/null || true
+}
+
 # Parse workflow YAML
 parse_workflow() {
   local workflow_name=$1
@@ -105,18 +143,21 @@ parse_workflow() {
   fi
 
   # Export workflow data as global variables
-  export WORKFLOW_NAME=$(yq '.name' "$workflow_file")
+  export WORKFLOW_NAME=$(yq -r '.name' "$workflow_file")
 
   # Get phases as array
   WORKFLOW_PHASES=()
   while IFS= read -r phase; do
     WORKFLOW_PHASES+=("$phase")
-  done < <(yq '.phases[]' "$workflow_file")
+  done < <(yq -r '.phases[]' "$workflow_file")
 
-  # Get retry policy (use temp file for Bash 3.2 compatibility)
+  # Recreate retry policy temp file (Bash 3.2 compatible)
+  if [[ -n "$RETRY_POLICY_FILE" && -f "$RETRY_POLICY_FILE" ]]; then
+    rm -f "$RETRY_POLICY_FILE"
+  fi
   RETRY_POLICY_FILE=$(mktemp)
   for phase in "${WORKFLOW_PHASES[@]}"; do
-    local max_attempts=$(yq ".retry_policy.$phase.max_attempts // 1" "$workflow_file")
+    local max_attempts=$(yq -r ".retry_policy.$phase.max_attempts // 1" "$workflow_file")
     echo "$phase:$max_attempts" >> "$RETRY_POLICY_FILE"
   done
 }
@@ -139,6 +180,21 @@ execute_phase() {
   while [[ $attempt -le $max_attempts ]]; do
     log_info "  Attempt $attempt/$max_attempts"
 
+    # If a previous attempt was aborted (e.g. by monitor-kill), clear the marker so retries can proceed.
+    rm -f "$AGENT_COMM_DIR/$STORY_ID/.${phase}-abort" 2>/dev/null || true
+
+    local feedback_hint=""
+    local feedback_file="$AGENT_COMM_DIR/$STORY_ID/.restart-feedback.md"
+    # Only inject feedback into planner/coder so they can adjust plan/implementation.
+    # Keep reviewer/tester prompts small to reduce noise.
+    if [[ ( "$phase" == "planner" || "$phase" == "coder" ) && -f "$feedback_file" ]]; then
+      feedback_hint="
+
+Previous run feedback (must address):
+$(cat "$feedback_file")
+"
+    fi
+
     # Prepare task message
     local task_message="Execute $phase for story $STORY_ID
 
@@ -147,6 +203,7 @@ Description: $(get_story_description)
 
 Acceptance Criteria:
 $(get_story_acceptance_criteria)
+$feedback_hint
 "
 
     # Check if agent exists (may be optional)
@@ -164,9 +221,26 @@ $(get_story_acceptance_criteria)
     agent_id=$(spawn_agent "$phase" "$task_message" "$STORY_ID")
 
     log_info "  Spawned agent: $agent_id"
+    if [[ "$agent_id" =~ ^cc-pid-([0-9]+)$ ]]; then
+      log_info "  Agent PID: ${BASH_REMATCH[1]}"
+    fi
 
     # Wait for agent to complete
-    wait_for_agents "$agent_id"
+    if ! wait_for_agent "$STORY_ID" "$phase" "$agent_id"; then
+      close_agent "$agent_id" 2>/dev/null || true
+
+      # For reviewer/tester failures, restart the workflow from planner.
+      # Rationale: a failed review or failed tests usually implies the plan/implementation needs revision.
+      if [[ "$phase" == "reviewer" || "$phase" == "tester" ]]; then
+        append_run_feedback "$phase"
+        log_warn "Phase $phase failed; restarting workflow from planner"
+        return 2
+      fi
+
+      # Otherwise, allow retry within this phase.
+      ((attempt++))
+      continue
+    fi
 
     # Check if phase succeeded
     if check_agent_success "$STORY_ID" "$phase"; then
@@ -184,6 +258,20 @@ $(get_story_acceptance_criteria)
         echo "$output" | head -n 20
       fi
 
+      # Show what files were created
+      local comm_dir="$AGENT_COMM_DIR/$STORY_ID"
+      echo "  Files in $comm_dir:"
+      ls -la "$comm_dir/" 2>/dev/null | grep -E "(review-|success|${phase}-output)" | head -10 || echo "    (no review files found)"
+
+      # If reviewer failed, show the review findings
+      if [[ "$phase" == "reviewer" ]]; then
+        local review_file="$comm_dir/review-changes.md"
+        if [[ -f "$review_file" ]]; then
+          echo "  Review findings:"
+          grep -E '^##|^###|^\-\s+\*\*' "$review_file" | head -20 | sed 's/^/    /'
+        fi
+      fi
+
       close_agent "$agent_id" 2>/dev/null || true
     fi
 
@@ -196,6 +284,7 @@ $(get_story_acceptance_criteria)
 
 # Main orchestrator logic
 main() {
+  log_debug "Bash: ${BASH_VERSION:-unknown}"
   log_info "Starting orchestration for story: $STORY_ID"
 
   # Get story details
@@ -219,12 +308,28 @@ main() {
   fi
 
   # Execute each phase sequentially
-  for phase in "${WORKFLOW_PHASES[@]}"; do
-    if ! execute_phase "$phase"; then
-      log_error "Orchestration failed at phase: $phase"
-      update_story_status "false"
-      exit 1
+  local start_index=0
+  local idx=0
+  while [[ $idx -lt ${#WORKFLOW_PHASES[@]} ]]; do
+    local phase=${WORKFLOW_PHASES[$idx]}
+    set +e
+    execute_phase "$phase"
+    local phase_rc=$?
+    set -e
+
+    if [[ $phase_rc -eq 0 ]]; then
+      ((idx++)) || true
+      continue
     fi
+
+    if [[ $phase_rc -eq 2 ]]; then
+      idx=0
+      continue
+    fi
+
+    log_error "Orchestration failed at phase: $phase"
+    update_story_status "false"
+    exit 1
   done
 
   # All phases passed - update PRD
@@ -232,17 +337,52 @@ main() {
 
   # Commit the story implementation
   log_info "Committing story implementation..."
+
+  # Never commit build artifacts, coverage reports, or dependencies.
+  # Agents may generate these during tests; keeping them out of git avoids
+  # huge commits and merge conflicts.
   git add -A
-  git commit -m "feat: $STORY_ID - $story_title
+  git reset -q -- node_modules dist coverage playwright-report test-results .playwright .vite .turbo .next 2>/dev/null || true
+  git checkout -q -- node_modules dist coverage playwright-report test-results .playwright .vite .turbo .next 2>/dev/null || true
+  git clean -fdq -- node_modules dist coverage playwright-report test-results .playwright .vite .turbo .next 2>/dev/null || true
 
-$(get_story_description)
+  local commit_msg_file
+  commit_msg_file=$(mktemp)
+  {
+    echo "feat: $STORY_ID - $story_title"
+    echo
+    get_story_description
+    echo
+    echo "Workflow: $workflow"
+    echo "Phases: ${WORKFLOW_PHASES[*]}"
+    echo
+    echo "Co-Authored-By: Claude <noreply@anthropic.com>"
+  } >"$commit_msg_file"
 
-Workflow: $workflow
-Phases: ${WORKFLOW_PHASES[*]}
-
-Co-Authored-By: Claude <noreply@anthropic.com>" || true
+  git commit -F "$commit_msg_file" || true
+  rm -f "$commit_msg_file" 2>/dev/null || true
 
   log_success "Story $STORY_ID completed successfully!"
+
+  # Some Claude CLI runs can hang after the phase is marked successful (e.g. during
+  # pre-flight). At this point the story is already committed and PRD updated, so
+  # it is safe to force-terminate any still-running phase pids to prevent the
+  # whole batch from appearing stuck.
+  local force_kill_after=${FORCE_KILL_DONE_PIDS_SECS:-30}
+  sleep "$force_kill_after" 2>/dev/null || true
+  for phase in planner coder reviewer tester; do
+    local pid_file="$AGENT_COMM_DIR/$STORY_ID/${phase}.pid"
+    [[ -f "$pid_file" ]] || continue
+    local pid
+    pid=$(tr -d ' \n\r\t' <"$pid_file" 2>/dev/null || true)
+    [[ -n "$pid" ]] || continue
+    if kill -0 "$pid" 2>/dev/null; then
+      log_warn "Force-terminating lingering pid after completion: story=$STORY_ID phase=$phase pid=$pid"
+      kill -TERM "$pid" 2>/dev/null || true
+      sleep 2
+      kill -KILL "$pid" 2>/dev/null || true
+    fi
+  done
 }
 
 # Run main

@@ -4,8 +4,43 @@
 
 set -euo pipefail
 
+# Ensure we always capture a primary run log even if the terminal closes.
+LOG_DIR_DEFAULT="$(pwd)/.ralph-logs"
+LOG_DIR="${LOG_DIR:-$LOG_DIR_DEFAULT}"
+mkdir -p "$LOG_DIR"
+MAIN_LOG_FILE_DEFAULT="$LOG_DIR/ralph-main.log"
+MAIN_LOG_FILE="${MAIN_LOG_FILE:-$MAIN_LOG_FILE_DEFAULT}"
+
+# Best-effort: mirror stdout/stderr to a file without relying on a pipeline in the caller.
+# NOTE: If we hard-redirect stdout/stderr here, interactive prompts may appear to "hang".
+# Keep terminal output by default; allow opt-in to full redirection.
+if [[ -z "${RALPH_MAIN_LOG_STARTED:-}" ]]; then
+  export RALPH_MAIN_LOG_STARTED=1
+  if [[ "${RALPH_REDIRECT_STDOUT:-false}" == "true" ]]; then
+    exec >>"$MAIN_LOG_FILE" 2>&1
+  else
+    # Avoid process substitution here: it creates extra bash processes and can
+    # interfere with lock fds, leading to confusing errors like "flock: 200: Bad file descriptor".
+    # Users can tee externally if needed:
+    #   ../raffaello/ralph.sh 2>&1 | tee -a .ralph-logs/ralph-main.log
+    :
+  fi
+fi
+
+_ralph_last_command=""
+trap '_ralph_last_command="$BASH_COMMAND"' DEBUG
+
+_ralph_on_exit() {
+  local exit_code=$?
+  if [[ $exit_code -ne 0 ]]; then
+    printf '[FATAL] ralph.sh exiting rc=%s last_cmd=%q\n' "$exit_code" "${_ralph_last_command:-}" >&2
+  else
+    printf '[INFO] ralph.sh exiting rc=0\n' >&2
+  fi
+}
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export SCRIPT_DIR
 
 # Source libraries
 source "$SCRIPT_DIR/lib/detect-cli.sh"
@@ -18,6 +53,52 @@ source "$SCRIPT_DIR/lib/logging.sh"
 
 # Configuration
 MAX_PARALLEL_STORIES=${MAX_PARALLEL_STORIES:-3}
+LOG_DIR="$LOG_DIR"
+
+# Global rerun budget across all stories in a single ralph.sh run.
+# If any story fails, ralph will try again in another iteration until budget is exhausted.
+GLOBAL_MAX_ITERATIONS=${GLOBAL_MAX_ITERATIONS:-1}
+
+# Optional watchdog to kill stalled agents and unblock orchestration.
+# Off by default for safety; enable to automatically enforce stall handling.
+AUTO_MONITOR_KILL=${AUTO_MONITOR_KILL:-false}
+MONITOR_INTERVAL_SECS=${MONITOR_INTERVAL_SECS:-10}
+MONITOR_STALL_SECS=${MONITOR_STALL_SECS:-300}
+
+# Avoid hangs when stdin is non-interactive (e.g. running under nohup or when stdout is redirected
+# to MAIN_LOG_FILE). Set to true to auto-confirm safe prompts.
+RALPH_ASSUME_YES=${RALPH_ASSUME_YES:-false}
+
+# Guard against accidental multi-start in the same project directory.
+# Use a PID file lock (not flock) to avoid fd portability issues.
+LOCK_FILE="${RALPH_LOCK_FILE:-$LOG_DIR/ralph.pid}"
+
+acquire_pid_lock() {
+  mkdir -p "$LOG_DIR" 2>/dev/null || true
+
+  if [[ -f "$LOCK_FILE" ]]; then
+    local existing_pid
+    existing_pid=$(tr -d ' \n\r\t' <"$LOCK_FILE" 2>/dev/null || true)
+    if [[ "$existing_pid" =~ ^[0-9]+$ ]] && kill -0 "$existing_pid" 2>/dev/null; then
+      log_error "Another ralph.sh is already running for this project (pid=$existing_pid)."
+      log_error "If you're sure it's stale, run: bash $SCRIPT_DIR/raffaello/kill-all.sh --project-dir $(pwd)"
+      exit 1
+    fi
+  fi
+
+  echo "$$" >"$LOCK_FILE" 2>/dev/null || true
+}
+
+release_pid_lock() {
+  # Only remove the lock if we still own it.
+  if [[ -f "$LOCK_FILE" ]]; then
+    local current
+    current=$(tr -d ' \n\r\t' <"$LOCK_FILE" 2>/dev/null || true)
+    if [[ "$current" == "$$" ]]; then
+      rm -f "$LOCK_FILE" 2>/dev/null || true
+    fi
+  fi
+}
 
 # Try current directory first, then script directory
 if [[ -f "prd.json" ]]; then
@@ -34,7 +115,71 @@ fi
 
 # Temporary directory for PID tracking (Bash 3.2 compatible)
 PID_TRACKING_DIR=$(mktemp -d)
-trap 'rm -rf "$PID_TRACKING_DIR"' EXIT
+
+# Keep a single EXIT trap handler so multiple sections don't overwrite each other.
+_ralph_cleanup() {
+  # Remove temp pid tracker
+  rm -rf "$PID_TRACKING_DIR" 2>/dev/null || true
+
+  # Best-effort: stop monitor-kill if we started one
+  if [[ -n "${LOG_DIR:-}" && -f "${LOG_DIR:-}/monitor-kill.pid" ]]; then
+    local mpid
+    mpid=$(cat "${LOG_DIR:-}/monitor-kill.pid" 2>/dev/null || true)
+    if [[ -n "$mpid" ]] && kill -0 "$mpid" 2>/dev/null; then
+      kill -TERM "$mpid" 2>/dev/null || true
+    fi
+  fi
+
+  release_pid_lock
+  _ralph_on_exit
+}
+
+trap _ralph_cleanup EXIT
+
+# Cleanup worktrees on interrupt
+cleanup_worktrees() {
+  # Kill all tracked background processes first
+  if [[ -d "$PID_TRACKING_DIR" ]]; then
+    for pid_file in "$PID_TRACKING_DIR"/*; do
+      if [[ -f "$pid_file" ]]; then
+        local pid
+        pid=$(basename "$pid_file")
+        if kill -0 "$pid" 2>/dev/null; then
+          log_info "Killing background process $pid"
+          kill -TERM "$pid" 2>/dev/null || true
+        fi
+      fi
+    done
+    # Wait for graceful shutdown
+    sleep 1
+    # Force kill any remaining
+    for pid_file in "$PID_TRACKING_DIR"/*; do
+      if [[ -f "$pid_file" ]]; then
+        local pid
+        pid=$(basename "$pid_file")
+        if kill -0 "$pid" 2>/dev/null; then
+          kill -KILL "$pid" 2>/dev/null || true
+        fi
+      fi
+    done
+  fi
+
+  # Then clean up worktrees
+  if [[ -d "$PWD/.ralph-worktrees" ]]; then
+    log_info "Cleaning up worktrees due to interrupt..."
+    for worktree_path in "$PWD/.ralph-worktrees"/*; do
+      if [[ -d "$worktree_path" ]]; then
+        git worktree remove "$worktree_path" 2>/dev/null || true
+      fi
+    done
+    rmdir "$PWD/.ralph-worktrees" 2>/dev/null || true
+    git worktree prune 2>/dev/null || true
+  fi
+
+  # Exit with error code 130 (standard for SIGINT)
+  exit 130
+}
+trap cleanup_worktrees INT TERM HUP
 
 # Check prerequisites
 check_prerequisites() {
@@ -183,7 +328,19 @@ check_prerequisites() {
     echo ""
     echo "Is this the CORRECT project directory? (yes/no)"
     echo "Type 'yes' to proceed, anything else to abort:"
-    read -r answer
+
+    local answer
+    if [[ "$RALPH_ASSUME_YES" == "true" ]]; then
+      answer="yes"
+      echo "[INFO] RALPH_ASSUME_YES=true: auto-confirmed" >&2
+    else
+      if [[ ! -t 0 ]]; then
+        log_error "stdin is not interactive; refusing to wait for confirmation"
+        log_error "Re-run with RALPH_ASSUME_YES=true or start ralph.sh in an interactive terminal"
+        exit 1
+      fi
+      read -r answer
+    fi
 
     if [[ "$answer" == "yes" ]]; then
       log_info "Initializing git repository in: $current_dir"
@@ -207,7 +364,20 @@ check_prerequisites() {
 
       # Final confirmation before git add
       echo "About to stage $file_count files. Continue? (yes/no)"
-      read -r confirm
+
+      local confirm
+      if [[ "$RALPH_ASSUME_YES" == "true" ]]; then
+        confirm="yes"
+        echo "[INFO] RALPH_ASSUME_YES=true: auto-confirmed" >&2
+      else
+        if [[ ! -t 0 ]]; then
+          log_error "stdin is not interactive; refusing to wait for confirmation"
+          log_error "Re-run with RALPH_ASSUME_YES=true or start ralph.sh in an interactive terminal"
+          rm -rf .git
+          exit 1
+        fi
+        read -r confirm
+      fi
       if [[ "$confirm" != "yes" ]]; then
         log_warn "Aborting. Cleaning up git repository..."
         rm -rf .git
@@ -329,30 +499,101 @@ execute_story() {
     return 1
   fi
 
-  # Check if branch already exists (idempotency)
   local branch_name="story-$story_id"
+  local worktree_dir="$PWD/.ralph-worktrees/$story_id"
+
+  # IMPORTANT: avoid stale phase markers across runs.
+  # /tmp/ralph-parallel is shared; old .<phase>-success files can cause false PASS.
+  local agent_comm_dir="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+  rm -rf "$agent_comm_dir/$story_id" 2>/dev/null || true
+  mkdir -p "$agent_comm_dir/$story_id" 2>/dev/null || true
+
+  # Create worktree for this story (isolated working directory)
   if git rev-parse --verify "$branch_name" &>/dev/null; then
-    log_warn "Branch $branch_name already exists, checking out existing branch"
-    git checkout "$branch_name" 2>/dev/null || {
-      log_error "Failed to checkout existing branch: $branch_name"
-      return 1
-    }
+    # Branch exists, create worktree from it
+    if [[ -d "$worktree_dir" ]]; then
+      # If the directory already exists but is not a valid worktree, recreate it.
+      if git worktree list --porcelain 2>/dev/null | grep -Fq "worktree $worktree_dir"; then
+        log_warn "Worktree already exists for $story_id, reusing"
+      else
+        log_warn "Stale worktree directory for $story_id detected, recreating"
+        rm -rf "$worktree_dir" 2>/dev/null || true
+        git worktree add "$worktree_dir" "$branch_name" 2>/dev/null || {
+          log_error "Failed to recreate worktree for branch: $branch_name"
+          return 1
+        }
+      fi
+    else
+      git worktree add "$worktree_dir" "$branch_name" 2>/dev/null || {
+        log_error "Failed to create worktree for existing branch: $branch_name"
+        return 1
+      }
+    fi
   else
-    # Create story branch
-    git checkout -b "$branch_name" 2>/dev/null || {
-      log_error "Failed to create branch: $branch_name"
-      return 1
-    }
+    # Create new branch and worktree
+    # If branch already exists (race or leftover), fall back to creating from the existing branch.
+    if git rev-parse --verify "$branch_name" &>/dev/null; then
+      rm -rf "$worktree_dir" 2>/dev/null || true
+      git worktree add "$worktree_dir" "$branch_name" 2>/dev/null || {
+        log_error "Failed to create worktree for existing branch: $branch_name"
+        return 1
+      }
+    else
+      rm -rf "$worktree_dir" 2>/dev/null || true
+      git worktree add -b "$branch_name" "$worktree_dir" 2>/dev/null || {
+        log_error "Failed to create worktree with branch: $branch_name"
+        return 1
+      }
+    fi
   fi
 
-  # Execute orchestrator for this story
-  if "$SCRIPT_DIR/orchestrator.sh" "$story_id"; then
-    log_success "Story $story_id completed successfully"
-    return 0
-  else
-    log_error "Story $story_id failed"
-    return 1
+  # Execute orchestrator in the worktree directory
+  # Copy PRD file to worktree if needed
+  if [[ -f "$PRD_FILE" ]]; then
+    cp "$PRD_FILE" "$worktree_dir/prd.json"
   fi
+
+  # Change to worktree directory and run orchestrator.
+  # IMPORTANT: avoid `| tee` pipelines here.
+  # If the parent stdout closes (common in some terminals/CI), `tee` can receive SIGPIPE,
+  # which can tear down the pipeline and make the story look like it "failed" mid-run.
+  # Instead, write logs directly to file; users can `tail -f` the per-story log.
+  local log_file="$LOG_DIR/${story_id}.log"
+  (
+    cd "$worktree_dir" || exit 1
+
+    # Run orchestrator under a clean bash to reduce environment-related parsing issues.
+    # (e.g., user shell configs via BASH_ENV or unexpected aliases/functions)
+    PRD_FILE="$worktree_dir/prd.json" \
+      bash --noprofile --norc "$SCRIPT_DIR/orchestrator.sh" "$story_id" >>"$log_file" 2>&1
+  )
+
+  local exit_code=$?
+
+  # Keep PRD authoritative in the main worktree to avoid last-writer-wins races.
+  # Orchestrator updates the PRD inside its worktree; here we only patch the single story's
+  # 'passes' flag back into main, guarded by flock.
+  if [[ -f "$worktree_dir/prd.json" ]]; then
+    local story_passes
+    story_passes=$(jq -r ".userStories[] | select(.id == \"$story_id\") | .passes" "$worktree_dir/prd.json" 2>/dev/null || echo "")
+
+    if [[ "$story_passes" == "true" || "$story_passes" == "false" ]]; then
+      local lock_file="$PRD_FILE.lock"
+      if (
+        flock -w 30 9 || exit 1
+        tmp_file=$(mktemp)
+        jq "(.userStories[] | select(.id == \"$story_id\") | .passes) = $story_passes" "$PRD_FILE" >"$tmp_file" && mv "$tmp_file" "$PRD_FILE"
+      ) 9>"$lock_file"; then
+        :
+      else
+        log_warn "Failed to acquire lock for PRD update, story may not be marked as complete"
+      fi
+    else
+      log_warn "Could not read passes status for $story_id from worktree PRD"
+    fi
+  fi
+
+  return $exit_code
 }
 
 # Main execution loop
@@ -360,42 +601,91 @@ main() {
   log_info "=== Ralph Parallel - Starting Execution ==="
   echo ""
 
+  acquire_pid_lock
+
   # Check prerequisites
   check_prerequisites
   echo ""
 
-  # Get incomplete stories
-  local incomplete_stories
-  incomplete_stories=$(get_incomplete_stories)
+  local iteration=1
+  while [[ $iteration -le $GLOBAL_MAX_ITERATIONS ]]; do
+    # Get incomplete stories
+    local incomplete_stories
+    incomplete_stories=$(get_incomplete_stories)
 
-  if [[ -z "$incomplete_stories" ]]; then
-    log_success "All stories are complete!"
+    if [[ -z "$incomplete_stories" ]]; then
+      log_success "All stories are complete!"
+      echo ""
+      echo "<promise>COMPLETE</promise>"
+      exit 0
+    fi
+
+    # Count incomplete stories
+    local story_count
+    story_count=$(echo "$incomplete_stories" | wc -l | tr -d ' ')
+    log_info "Iteration $iteration/$GLOBAL_MAX_ITERATIONS: $story_count incomplete stories"
     echo ""
-    echo "<promise>COMPLETE</promise>"
-    exit 0
+
+    # Analyze dependencies and get execution batches
+    log_info "Analyzing dependencies..."
+    local execution_plan
+    execution_plan=$("$SCRIPT_DIR/lib/dependency-analyzer.sh" "$PRD_FILE")
+
+    # Parse execution plan (JSON format)
+    local batches
+    batches=$(echo "$execution_plan" | jq -r '.batches | length')
+
+    log_info "Execution plan: $batches batches"
+    echo ""
+
+  # Show log directory location
+  echo "════════════════════════════════════════"
+  echo "📁 Story logs will be saved to:"
+  echo "   $LOG_DIR/"
+  echo ""
+  echo "Monitor individual stories:"
+  echo "   tail -f $LOG_DIR/<STORY_ID>.log"
+  echo ""
+  echo "Common debugging commands:"
+  echo "   ls -la ${AGENT_COMM_DIR:-/tmp/ralph-parallel}/<STORY_ID>/"
+  echo "   tail -f ${AGENT_COMM_DIR:-/tmp/ralph-parallel}/<STORY_ID>/<PHASE>-output.txt"
+  echo "   cat ${AGENT_COMM_DIR:-/tmp/ralph-parallel}/<STORY_ID>/<PHASE>.pid"
+  echo "   pid=\$(cat ${AGENT_COMM_DIR:-/tmp/ralph-parallel}/<STORY_ID>/<PHASE>.pid 2>/dev/null || true); [[ -n \"\$pid\" ]] && ps -p \"\$pid\" -o pid,ppid,cmd || echo \"no pid\""
+  echo "Monitor (optional):"
+  echo "   nohup $SCRIPT_DIR/raffaello/monitor.sh \"$(pwd)\" > $LOG_DIR/monitor.nohup.log 2>&1 &"
+  echo "   tail -f $LOG_DIR/monitor.nohup.log"
+  echo "Auto kill-stalled (optional):"
+  echo "   AUTO_MONITOR_KILL=true MONITOR_STALL_SECS=300 MONITOR_INTERVAL_SECS=10 $0"
+  echo "════════════════════════════════════════"
+  echo ""
+
+  # Start kill-stalled monitor in background if enabled.
+  # Write directly to monitor-kill.log (and optionally mirror to stdout via --stdout).
+  if [[ "$AUTO_MONITOR_KILL" == "true" ]]; then
+    log_warn "AUTO_MONITOR_KILL=true: will kill stalled agents (stall=${MONITOR_STALL_SECS}s interval=${MONITOR_INTERVAL_SECS}s)"
+    echo "[INFO] Monitor-kill log: $LOG_DIR/monitor-kill.log"
+    # If a previous run left a monitor-kill process behind, stop it first.
+    if [[ -f "$LOG_DIR/monitor-kill.pid" ]]; then
+      old_pid=$(cat "$LOG_DIR/monitor-kill.pid" 2>/dev/null || true)
+      if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+        kill -TERM "$old_pid" 2>/dev/null || true
+      fi
+      rm -f "$LOG_DIR/monitor-kill.pid" 2>/dev/null || true
+    fi
+    (
+      STALL_SECS="$MONITOR_STALL_SECS" INTERVAL_SECS="$MONITOR_INTERVAL_SECS" KILL_STALLED=true OUT_LOG="$LOG_DIR/monitor-kill.log" \
+        bash "$SCRIPT_DIR/raffaello/monitor.sh" "$(pwd)" >/dev/null 2>&1
+    ) &
+    echo $! >"$LOG_DIR/monitor-kill.pid" 2>/dev/null || true
+    disown $! 2>/dev/null || true
+    log_info "Monitor-kill started (pid=$(cat "$LOG_DIR/monitor-kill.pid" 2>/dev/null || echo "?"))."
   fi
 
-  # Count incomplete stories
-  local story_count
-  story_count=$(echo "$incomplete_stories" | wc -l | tr -d ' ')
-  log_info "Found $story_count incomplete stories"
-  echo ""
+    local any_failed=0
 
-  # Analyze dependencies and get execution batches
-  log_info "Analyzing dependencies..."
-  local execution_plan
-  execution_plan=$("$SCRIPT_DIR/lib/dependency-analyzer.sh" "$PRD_FILE")
-
-  # Parse execution plan (JSON format)
-  local batches
-  batches=$(echo "$execution_plan" | jq -r '.batches | length')
-
-  log_info "Execution plan: $batches batches"
-  echo ""
-
-  # Execute each batch
-  local batch_idx=0
-  while [[ $batch_idx -lt $batches ]]; do
+    # Execute each batch
+    local batch_idx=0
+    while [[ $batch_idx -lt $batches ]]; do
     local batch_stories
     batch_stories=$(echo "$execution_plan" | jq -r ".batches[$batch_idx][]")
 
@@ -403,7 +693,6 @@ main() {
 
     # Track background processes
     local pids=()
-    local story_pids=()
 
     # Execute stories in this batch (parallel, up to MAX_PARALLEL_STORIES at a time)
     local concurrent=0
@@ -412,6 +701,11 @@ main() {
       story_title=$(get_story_title "$story_id") || continue
 
       # Start story execution in background
+      log_info "Starting story: $story_id - $story_title"
+      echo "  → Log file: $LOG_DIR/${story_id}.log"
+      echo "  → Monitor: tail -f $LOG_DIR/${story_id}.log"
+      echo ""
+
       execute_story "$story_id" "$story_title" &
       local pid=$!
       pids+=("$pid")
@@ -419,24 +713,27 @@ main() {
       # Store PID to story_id mapping in file (Bash 3.2 compatible)
       echo "$story_id" > "$PID_TRACKING_DIR/$pid"
 
-      ((concurrent++))
+      ((concurrent++)) || true
 
       # If we've reached max parallel, wait for one to finish
       if [[ $concurrent -ge $MAX_PARALLEL_STORIES ]]; then
-        # Bash 3.2 compatible: wait for all, then decrement
-        if wait -n "${pids[@]}" 2>/dev/null; then
-          ((concurrent--))
-        else
-          # wait -n not supported (Bash 3.2), wait for any PID
-          wait "${pids[0]}" || true
-          ((concurrent--))
-        fi
+        # Throttle: wait for the oldest PID we still track.
+        # This is portable (no `wait -n`) and avoids `set -e` traps on bash 3.2.
+        wait "${pids[0]}" || true
+        pids=("${pids[@]:1}")
+        ((concurrent--)) || true
       fi
     done
 
+    # Ensure we wait for any remaining PIDs started in this batch.
+    # (Some may have already been reaped by the throttle wait above.)
+    if [[ ${#pids[@]} -eq 0 ]]; then
+      log_info "No remaining processes to wait for in this batch"
+    fi
+
     # Wait for all stories in this batch to complete
     log_info "Waiting for batch $((batch_idx + 1)) to complete..."
-    for pid in "${pids[@]}"; do
+      for pid in "${pids[@]}"; do
       local story_id
       if [[ -f "$PID_TRACKING_DIR/$pid" ]]; then
         story_id=$(<"$PID_TRACKING_DIR/$pid")
@@ -444,17 +741,58 @@ main() {
         story_id="unknown"
       fi
 
-      if wait "$pid"; then
+        if wait "$pid"; then
         log_success "Story $story_id finished successfully"
+        echo "  → Full log: $LOG_DIR/${story_id}.log"
       else
         log_error "Story $story_id failed"
+        echo "  → Check log: $LOG_DIR/${story_id}.log"
+        any_failed=1
         # Continue with other stories even if one fails
       fi
     done
 
     echo ""
-    ((batch_idx++))
+      ((batch_idx++))
+    done
+
+    if [[ $any_failed -eq 0 ]]; then
+      break
+    fi
+
+    if [[ $iteration -lt $GLOBAL_MAX_ITERATIONS ]]; then
+      log_warn "Some stories failed; rerunning incomplete stories (next iteration)"
+      echo ""
+    fi
+
+    ((iteration++))
   done
+
+  # Clean up worktrees
+  log_info "Cleaning up worktrees..."
+  if [[ -d "$PWD/.ralph-worktrees" ]]; then
+    for worktree_path in "$PWD/.ralph-worktrees"/*; do
+      if [[ -d "$worktree_path" ]]; then
+        git worktree remove "$worktree_path" 2>/dev/null || {
+          log_warn "Failed to remove worktree: $worktree_path, forcing cleanup"
+          rm -rf "$worktree_path" 2>/dev/null || true
+        }
+      fi
+    done
+    rmdir "$PWD/.ralph-worktrees" 2>/dev/null || true
+  fi
+  git worktree prune 2>/dev/null || true
+  log_success "Worktrees cleaned up"
+  echo ""
+
+  # Clean up agent communication dirs for this project run.
+  # /tmp/ralph-parallel is shared across runs; leaving old STORY-* dirs around confuses monitoring
+  # and can contribute to stale state issues.
+  log_info "Cleaning up agent communication directories..."
+  local agent_comm_dir="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+  rm -rf "$agent_comm_dir"/STORY-[0-9]* 2>/dev/null || true
+  log_success "Agent communication directories cleaned"
+  echo ""
 
   # Merge all story branches
   log_info "=== Merging Story Branches ==="
@@ -466,6 +804,8 @@ main() {
 
   echo ""
   log_success "=== Ralph Parallel - Execution Complete ==="
+
+  release_pid_lock
 }
 
 # Run main

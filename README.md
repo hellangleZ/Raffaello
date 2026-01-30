@@ -671,6 +671,20 @@ git branch -d story-US001 story-US002 story-US003
 
 ## Troubleshooting & Debugging
 
+### Avoid Committing `.ralph-worktrees/`
+
+`.ralph-worktrees/` contains git worktrees and build artifacts, and should not be committed.
+
+You only need to run `git rm -r --cached .ralph-worktrees` if you already accidentally committed it (one-time fix).
+
+```bash
+# Remove from index if accidentally committed
+git rm -r --cached .ralph-worktrees || true
+
+# Ensure it is ignored
+echo '.ralph-worktrees/' >> .gitignore
+```
+
 ### Understanding the Log Output
 
 Ralph Parallel produces color-coded logs with different prefixes:
@@ -703,6 +717,60 @@ Ralph Parallel outputs logs to stdout in real-time:
 [ORCHESTRATOR] Starting orchestration for story: US001
 [ORCHESTRATOR] Executing phase: coder (max attempts: 2)
 ...
+```
+
+### Quick Commands (Copy/Paste)
+
+```bash
+# Tail a specific story log
+tail -f .ralph-logs/STORY-001.log
+
+# Inspect agent communication directory for a story
+ls -la /tmp/ralph-parallel/STORY-001/
+
+# Tail key phase output
+tail -n 80 /tmp/ralph-parallel/STORY-001/coder-output.txt
+
+# Check background agent pid (if present)
+pid=$(cat /tmp/ralph-parallel/STORY-001/coder.pid 2>/dev/null || true)
+[[ -n "$pid" ]] && ps -p "$pid" -o pid,ppid,cmd || echo "no pid"
+
+# Watch whether output is still growing (helps spot stalls)
+watch -n 2 'wc -c /tmp/ralph-parallel/STORY-001/*-output.txt 2>/dev/null || true'
+
+# If a story looks "instantly passed" but produced no output, clear stale markers from older runs
+rm -rf /tmp/ralph-parallel/STORY-001
+```
+
+### Background Monitor (Optional)
+
+You can run a lightweight monitor in the background to periodically report story/agent status.
+
+```bash
+# Observe-only (recommended)
+nohup /aml/raffaello/raffaello/monitor.sh /aml/test > /aml/test/.ralph-logs/monitor.nohup.log 2>&1 &
+tail -f /aml/test/.ralph-logs/monitor.nohup.log
+
+# Kill-stalled mode (use with care)
+# - Kills an agent PID if: alive=yes, success=no, and output hasn't grown for STALL_SECS
+# - Also writes an abort marker so the orchestrator stops waiting immediately.
+STALL_SECS=300 INTERVAL_SECS=10 \
+  nohup /aml/raffaello/raffaello/monitor-kill.sh /aml/test > /aml/test/.ralph-logs/monitor-kill.nohup.log 2>&1 &
+tail -f /aml/test/.ralph-logs/monitor-kill.nohup.log
+
+# Foreground (prints to terminal)
+STALL_SECS=300 INTERVAL_SECS=10 \
+  /aml/raffaello/raffaello/monitor-kill.sh /aml/test
+
+# Quick stop + optional clean (kills ralph + agents)
+/aml/raffaello/raffaello/kill-all.sh --project-dir /aml/test --clean
+
+# Auto-enable kill-stalled monitor when running ralph.sh (use with care)
+AUTO_MONITOR_KILL=true MONITOR_STALL_SECS=300 MONITOR_INTERVAL_SECS=10 \
+  /aml/raffaello/ralph.sh
+
+# Global rerun iterations (re-runs incomplete stories if any failed)
+GLOBAL_MAX_ITERATIONS=2 /aml/raffaello/ralph.sh
 ```
 
 ### Check Story Progress
@@ -738,6 +806,21 @@ cat /tmp/ralph-parallel/US001/coder-prompt.txt
 
 # View the agent's execution output (if synchronous)
 cat /tmp/ralph-parallel/US001/coder-output.txt
+```
+
+### Check Background Agent PID
+
+Each phase persists its background process PID (when available) to help debugging.
+
+```bash
+# View the PID for a running phase
+cat /tmp/ralph-parallel/US001/coder.pid
+
+# Inspect the process
+ps -p "$(cat /tmp/ralph-parallel/US001/coder.pid)" -o pid,ppid,cmd
+
+# Follow live output
+tail -f /tmp/ralph-parallel/US001/coder-output.txt
 ```
 
 ### Check PRD Status
