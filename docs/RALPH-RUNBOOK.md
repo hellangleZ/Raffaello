@@ -42,7 +42,7 @@ Optional flags:
 What it does:
 
 - Starts the monitor in the background (nohup) and writes to `.ralph-logs/monitor.nohup.log`.
-- Runs `../raffaello/ralph.sh` in the foreground with safe defaults (`RALPH_ASSUME_YES=true`, auto monitor-kill enabled).
+- Runs `/aml/raffaello/ralph.sh` in the foreground with safe defaults (`RALPH_ASSUME_YES=true`, auto monitor-kill enabled).
 
 ## 1) 开始一轮
 
@@ -62,7 +62,7 @@ cd /aml/test
 它做的事情：
 
 - 后台启动 monitor（nohup），日志写入 `.ralph-logs/monitor.nohup.log`
-- 前台运行 `../raffaello/ralph.sh`（带默认参数，跳过交互确认 + 自动 watch-dog）
+- 前台运行 `/aml/raffaello/ralph.sh`（带默认参数，跳过交互确认 + 自动 watch-dog）
 
 ### Parameters / 参数说明
 
@@ -194,7 +194,7 @@ If you also want to clean comm/worktrees state:
 /aml/raffaello/bin/ralph-finish.sh --project-dir /aml/test --clean
 ```
 
-If you want to automatically merge only `passes=true` stories into the current branch (recommended: `master`):
+If you want to automatically merge only `passes=true` stories into the current branch (recommended: your main branch (e.g. `main`)):
 
 ```bash
 /aml/raffaello/bin/ralph-finish.sh --project-dir /aml/test --clean --merge-pass
@@ -221,7 +221,7 @@ cd /aml/test
 /aml/raffaello/bin/ralph-finish.sh --project-dir /aml/test --clean
 ```
 
-停干净 + 清理 + 自动把 `passes=true` 的 story 合并回当前分支（推荐在 `master` 上执行）：
+停干净 + 清理 + 自动把 `passes=true` 的 story 合并回当前分支（推荐在你的主分支（例如 `main`）上执行：
 
 ```bash
 /aml/raffaello/bin/ralph-finish.sh --project-dir /aml/test --clean --merge-pass
@@ -428,8 +428,8 @@ Common files:
 
 Implication:
 
-- EN: `/aml/test` stays on `master` and will look "empty" until you merge story branches.
-- CN: `/aml/test` 默认停留在 `master`，所以在 merge 之前看起来像“没代码”。
+- EN: `/aml/test` stays on your main branch (e.g. `main`) and will look "empty" until you merge story branches.
+- CN: `/aml/test` 默认停留在你的主分支（例如 `main`），所以在 merge 之前看起来像“没代码”。
 
 ### Orchestrator cleanup after completion / 完成后清理残留进程
 
