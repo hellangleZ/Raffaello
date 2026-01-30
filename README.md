@@ -41,7 +41,14 @@ cp prd.json.example prd.json
 ./ralph.sh
 ```
 
+If you prefer a one-command wrapper (auto monitor + safer defaults):
+
+```bash
+/path/to/Raffaello/bin/ralph-start.sh --project-dir /path/to/your/project
+```
+
 See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
+See [docs/RALPH-RUNBOOK.md](docs/RALPH-RUNBOOK.md) for a step-by-step start → monitor → merge → finish guide.
 
 ## Usage Instructions
 

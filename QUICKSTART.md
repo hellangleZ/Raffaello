@@ -116,6 +116,14 @@ Create `prd.json`:
 ./ralph.sh
 ```
 
+If you prefer a one-command wrapper (auto monitor + safer defaults):
+
+```bash
+/path/to/Raffaello/bin/ralph-start.sh --project-dir /path/to/your/project
+```
+
+See `docs/RALPH-RUNBOOK.md` for start → monitor → merge → finish.
+
 You'll see output like:
 ```
 [RALPH] Starting Ralph Parallel execution...
