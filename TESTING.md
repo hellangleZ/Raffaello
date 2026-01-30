@@ -8,6 +8,16 @@
 ./run-tests.sh suite
 ```
 
+## Legacy Unit/Regression Tests (Offline)
+
+Some older unit/regression tests live under `tools/tests/unit-legacy/`.
+
+Run them via:
+
+```bash
+./run-tests.sh unit
+```
+
 这会测试所有改进和bug修复（~20个测试，耗时<10秒）。
 
 ## 预期输出

@@ -11,13 +11,14 @@ echo ""
 usage() {
   cat <<'EOF'
 Usage:
-  ./run-tests.sh [quick|workflows|e2e|suite|all]
+  ./run-tests.sh [quick|workflows|e2e|suite|unit|all]
 
 Commands:
   quick      Fast static checks (default)
   workflows  Workflow/agent/dependency tests
   e2e        End-to-end repo checks with test-project
   suite      Full improvement suite (larger)
+  unit       Legacy unit/regression tests (offline)
   all        Run quick + workflows + e2e + suite
 EOF
 }
@@ -25,7 +26,7 @@ EOF
 MODE="${1:-quick}"
 case "$MODE" in
   -h|--help|help) usage; exit 0 ;;
-  quick|workflows|e2e|suite|all) ;;
+  quick|workflows|e2e|suite|unit|all) ;;
   *) echo "Unknown mode: $MODE"; echo ""; usage; exit 2 ;;
 esac
 
@@ -136,11 +137,38 @@ run_suite() {
   fi
 }
 
+run_unit() {
+  local legacy_dir="$TESTS_DIR/unit-legacy"
+  if [[ ! -d "$legacy_dir" ]]; then
+    echo "✗ Missing $legacy_dir"
+    exit 1
+  fi
+
+  local failures=0
+  shopt -s nullglob
+  for t in "$legacy_dir"/*_test.sh; do
+    echo "=== $(basename "$t") ==="
+    if bash "$t"; then
+      :
+    else
+      failures=$((failures + 1))
+    fi
+    echo ""
+  done
+  shopt -u nullglob
+
+  if [[ $failures -ne 0 ]]; then
+    echo "✗ unit tests failed: $failures"
+    exit 1
+  fi
+}
+
 case "$MODE" in
   quick) ;;
   workflows) run_workflows ;;
   e2e) run_e2e ;;
   suite) run_suite ;;
+  unit) run_unit ;;
   all)
     echo ""
     run_workflows
@@ -148,6 +176,8 @@ case "$MODE" in
     run_e2e
     echo ""
     run_suite
+    echo ""
+    run_unit
     ;;
 esac
 
