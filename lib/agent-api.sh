@@ -12,6 +12,9 @@ source "$LIB_DIR/detect-cli.sh"
 AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
 mkdir -p "$AGENT_COMM_DIR"
 
+DEFAULT_CLAUDE_TOOLS=${DEFAULT_CLAUDE_TOOLS:-"Bash,Read,Write,Edit,Glob,Grep"}
+DEFAULT_CLAUDE_MODEL=${DEFAULT_CLAUDE_MODEL:-"sonnet"}
+
 # Spawn an agent with a specific role
 # Args: $1=agent_name, $2=task_message, $3=story_id (optional)
 spawn_agent() {
@@ -26,8 +29,7 @@ spawn_agent() {
     exit 1
   fi
 
-  # Claude Code: Use Task tool (spawns managed background task)
-  # NOTE: Claude Code manages agent lifecycle automatically via Task system
+  # Claude Code: run a single CLI process per phase.
   mkdir -p "$AGENT_COMM_DIR/$story_id"
   local prompt_file="$AGENT_COMM_DIR/$story_id/${agent_name}-prompt.txt"
   local output_file="$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt"
@@ -35,12 +37,16 @@ spawn_agent() {
   # Clear old output file before spawning new agent to avoid stale data on retry
   rm -f "$output_file" 2>/dev/null || true
 
+  # Build prompt without markdown list prefixes at line starts.
+  # Some Claude Code builds can hang when stdin contains long markdown lists,
+  # especially when piping via `--print`.
   local full_prompt
-  full_prompt="$(<"$agent_prompt_file")
+  full_prompt="Agent role: $agent_name
 
----
+$(sed 's/^\s*[-*]\s\+ /  /' "$agent_prompt_file")
 
-Task: $task_message
+Task:
+$(printf '%s' "$task_message" | sed 's/^\s*[-*]\s\+ /  /')
 
 Story ID: $story_id
 Communication Directory: $AGENT_COMM_DIR/$story_id"
@@ -48,20 +54,24 @@ Communication Directory: $AGENT_COMM_DIR/$story_id"
   # Write prompt to file
   echo "$full_prompt" > "$prompt_file"
 
-  # Run claude with auto-accept permissions for autonomous execution
-  # IMPORTANT: Run from current directory (project root), not from communication directory
-  # Pass COMMUNICATION_DIRECTORY as environment variable so agents know where to write markers
-  # Use background execution with output capture
-  # Start agent asynchronously. Do not use command substitution here; it would wait.
-  # Use stdbuf so output is line-buffered (helps monitoring and heartbeat checks).
+  # Run claude in non-interactive print mode.
+  # IMPORTANT:
+  # - Use `--print` mode so output is captured to file.
+  # - Use bypass permissions + skip permissions so tools can run.
+  # - Prefer `--allowed-tools` to avoid interactive tool gating.
+  # Feed the prompt via stdin. Also add the communication directory to Claude's
+  # tool allowlist so file operations are permitted.
   COMMUNICATION_DIRECTORY="$AGENT_COMM_DIR/$story_id" \
-    stdbuf -oL -eL claude --dangerously-skip-permissions < "$prompt_file" >"$output_file" 2>&1 &
+    stdbuf -oL -eL bash -lc \
+      "claude -p \
+        --model '$DEFAULT_CLAUDE_MODEL' \
+        --no-session-persistence \
+        --permission-mode bypassPermissions \
+        --add-dir '$AGENT_COMM_DIR/$story_id' \
+        --allowed-tools '$DEFAULT_CLAUDE_TOOLS' \
+        --dangerously-skip-permissions" \
+      < "$prompt_file" >"$output_file" 2>&1 &
   local agent_pid=$!
-
-  # Some environments kill background jobs when the parent shell exits.
-  # We want story agents to survive independently of ralph.sh/orchestrator.sh,
-  # so detach the process from the parent job control when possible.
-  disown "$agent_pid" 2>/dev/null || true
 
   # Persist PID for debugging/monitoring.
   echo "$agent_pid" >"$AGENT_COMM_DIR/$story_id/${agent_name}.pid"
@@ -69,31 +79,8 @@ Communication Directory: $AGENT_COMM_DIR/$story_id"
   # Give claude a moment to start
   sleep 0.5
 
-  # Extract task ID from running tasks
-  # Claude Code spawns background tasks - we need to find the most recent one
-  local task_id=""
-  local max_attempts=5
-  local attempt=0
-
-  while [[ -z "$task_id" && $attempt -lt $max_attempts ]]; do
-    # Try to get task ID from various sources
-    # Method 2: Check for success marker (agent completed quickly)
-    if [[ -f "$AGENT_COMM_DIR/$story_id/.${agent_name}-success" ]]; then
-      task_id="sync"
-      break
-    fi
-
-    ((attempt++))
-    sleep 0.5
-  done
-
-  if [[ "$task_id" == "sync" ]]; then
-    # Agent completed synchronously
-    echo "cc-sync"
-  else
-    # Agent is running in background - return pid based identifier
-    echo "cc-pid-$agent_pid"
-  fi
+  # Agent is running in background - return pid based identifier
+  echo "cc-pid-$agent_pid"
 }
 
 # Wait for multiple agents to complete
@@ -110,21 +97,19 @@ wait_for_agent() {
 
   local timeout=${AGENT_TIMEOUT_SECS:-1800} # 30 minutes default
   local idle_timeout=${AGENT_IDLE_TIMEOUT_SECS:-300} # 5 minutes without output
+  local preflight_timeout=${AGENT_PREFLIGHT_TIMEOUT_SECS:-120} # pre-flight hang cutoff
 
-  if [[ "$agent_id" =~ ^cc-task-([a-f0-9]+)$ ]]; then
-    local task_id="${BASH_REMATCH[1]}"
-    # Use claude task output command to wait for completion
-    claude task output "$task_id" > /dev/null 2>&1 || true
-  elif [[ "$agent_id" == "cc-sync" ]]; then
+  if [[ "$agent_id" == "cc-sync" ]]; then
     # Synchronous execution, already complete
     :
   elif [[ "$agent_id" =~ ^cc-pid-([0-9]+)$ ]]; then
     local agent_pid="${BASH_REMATCH[1]}"
     local elapsed=0
     local check_interval=2
+    local output_file="$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt"
     local last_size=0
-    if [[ -f "$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt" ]]; then
-      last_size=$(wc -c <"$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt" | tr -d ' ')
+    if [[ -f "$output_file" ]]; then
+      last_size=$(wc -c <"$output_file" | tr -d ' ')
     fi
     local idle_elapsed=0
 
@@ -141,11 +126,17 @@ wait_for_agent() {
         return 0
       fi
 
+      # If process already exited and no success marker, stop waiting.
+      if ! kill -0 "$agent_pid" 2>/dev/null; then
+        return 1
+      fi
+
       # Heartbeat: detect if output is growing.
       local current_size=0
-      if [[ -f "$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt" ]]; then
-        current_size=$(wc -c <"$AGENT_COMM_DIR/$story_id/${agent_name}-output.txt" | tr -d ' ')
+      if [[ -f "$output_file" ]]; then
+        current_size=$(wc -c <"$output_file" | tr -d ' ')
       fi
+
       if [[ $current_size -gt $last_size ]]; then
         last_size=$current_size
         idle_elapsed=0
@@ -155,11 +146,6 @@ wait_for_agent() {
 
       if [[ $idle_elapsed -ge $idle_timeout ]]; then
         echo "WARNING: Agent $agent_name has no new output for ${idle_timeout}s" >&2
-        return 1
-      fi
-
-      # If process already exited and no success marker, stop waiting.
-      if ! kill -0 "$agent_pid" 2>/dev/null; then
         return 1
       fi
 
@@ -177,10 +163,8 @@ wait_for_agent() {
 close_agent() {
   local agent_id=$1
 
-  # Claude Code: Tasks are auto-managed, no explicit cleanup needed
-  if [[ "$agent_id" =~ ^cc-task-([a-f0-9]+)$ ]]; then
-    :
-  fi
+  # Claude Code: no explicit cleanup needed.
+  :
 }
 
 # Check if agent succeeded (by looking for success marker file)

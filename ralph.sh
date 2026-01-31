@@ -179,7 +179,10 @@ cleanup_worktrees() {
   # Exit with error code 130 (standard for SIGINT)
   exit 130
 }
-trap cleanup_worktrees INT TERM HUP
+# Only SIGINT (Ctrl-C) should trigger aggressive cleanup. Treat TERM/HUP as a
+# request to stop without tearing down worktrees mid-flight; the monitor-kill
+# process may send TERM to stale processes.
+trap cleanup_worktrees INT
 
 # Check prerequisites
 check_prerequisites() {

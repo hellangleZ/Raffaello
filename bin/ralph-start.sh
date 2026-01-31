@@ -81,11 +81,14 @@ if [[ -n "${PROFILE:-}" ]]; then
   fi
 fi
 
-mkdir -p .ralph-logs
-
 echo "[ralph-start] project=$PROJECT_DIR"
 echo "[ralph-start] project=$PROJECT_DIR profile=$PROFILE iters=$ITERS stall=$STALL_SECS interval=$INTERVAL_SECS"
 cd "$PROJECT_DIR"
+
+mkdir -p .ralph-logs
+
+# Per-project comm dir to avoid cross-run monitor confusion
+export AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel-$(echo "$PROJECT_DIR" | sha256sum | awk '{print $1}' | cut -c1-10)}"
 
 # Start monitor in background (observe-only); ralph.sh may start monitor-kill separately.
 nohup env SHOW_STALE_STORIES=false SHOW_INACTIVE=false \

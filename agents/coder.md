@@ -49,11 +49,18 @@ Follow this strictly:
 
 ## Success Signal
 
-**CRITICAL**: When implementation is complete and all tests pass, write the success marker:
+**CRITICAL**: When implementation is complete and all tests pass, write a short summary file:
 
 ```bash
 mkdir -p "$COMMUNICATION_DIRECTORY"
-echo "success" > "$COMMUNICATION_DIRECTORY/.coder-success"
+cat > "$COMMUNICATION_DIRECTORY/implementation-summary.md" <<'EOF'
+# Implementation summary
+
+- Story: ${STORY_ID}
+- Summary: (what you built)
+- Key files changed: (paths)
+- Tests run: (commands) and results
+EOF
 ```
 
 **DO NOT** write the marker if:
@@ -68,7 +75,7 @@ You are running in **fully autonomous mode**. DO NOT wait for user approval.
 
 **When you're done**:
 1. ✅ Commit your changes immediately with `git commit`
-2. ✅ Write the success marker file
+2. ✅ Write `implementation-summary.md`
 3. ✅ Exit (do not ask for approval or confirmation)
 
 **No user interaction expected** - proceed directly to completion after writing files.
@@ -77,7 +84,7 @@ You are running in **fully autonomous mode**. DO NOT wait for user approval.
 
 - Input: `plan.md` from planner agent (if workflow includes planner)
 - Output: Committed code with passing tests
-- Success marker: `.coder-success` file in `$COMMUNICATION_DIRECTORY`
+- Success signal: `implementation-summary.md` file in `$COMMUNICATION_DIRECTORY`
 
 ## Important
 

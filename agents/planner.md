@@ -47,6 +47,19 @@ Create a `plan.md` file with this structure:
 - [ ] Criterion 2
 ```
 
+## Hard requirement (must do)
+
+You MUST create `plan.md` in `$COMMUNICATION_DIRECTORY` using a shell command.
+
+Example:
+
+```bash
+mkdir -p "$COMMUNICATION_DIRECTORY"
+cat > "$COMMUNICATION_DIRECTORY/plan.md" <<'EOF'
+# Implementation Plan: ...
+EOF
+```
+
 ## Important Rules
 
 - **DO NOT implement code** - Only create the plan

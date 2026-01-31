@@ -1,5 +1,5 @@
 name: full-stack
-description: Full-stack workflow with optional specialist agents (requires custom agents in ~/.claude/agents/ or ~/.codex/agents/)
+description: Full-stack workflow with optional specialist agents (requires custom agents in ~/.claude/agents/)
 
 phases:
   - planner

@@ -25,6 +25,7 @@ PROJECT_ROOT="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 source "$PROJECT_ROOT/lib/detect-cli.sh"
 source "$PROJECT_ROOT/lib/agent-api.sh"
 source "$PROJECT_ROOT/lib/load-agents.sh"
+source "$PROJECT_ROOT/lib/contract-files.sh" 2>/dev/null || true
 
 # Source unified logging
 export LOG_PREFIX="ORCHESTRATOR"
@@ -89,6 +90,17 @@ get_story_description() {
 # Get story acceptance criteria
 get_story_acceptance_criteria() {
   get_story | jq -r '.acceptanceCriteria[]?' 2>/dev/null || echo ""
+}
+
+get_baseline_contract_text() {
+  local repo_root
+  repo_root=$(cd "$(dirname "$PRD_FILE")" && pwd)
+  local contract="$repo_root/${CONTRACT_BASENAME:-BASELINE_CONTRACT.md}"
+  if [[ -f "$contract" ]]; then
+    echo "
+Baseline Contract (${CONTRACT_BASENAME:-BASELINE_CONTRACT.md}):\n"
+    cat "$contract"
+  fi
 }
 
 # Update PRD to mark story as passed
@@ -195,6 +207,8 @@ $(cat "$feedback_file")
 "
     fi
 
+    local comm_dir="$AGENT_COMM_DIR/$STORY_ID"
+
     # Prepare task message
     local task_message="Execute $phase for story $STORY_ID
 
@@ -203,6 +217,15 @@ Description: $(get_story_description)
 
 Acceptance Criteria:
 $(get_story_acceptance_criteria)
+$(get_baseline_contract_text)
+
+Communication Directory (absolute path): $comm_dir
+
+IMPORTANT:
+- Any files you create MUST be under the communication directory above.
+- When referencing \$COMMUNICATION_DIRECTORY, treat it as that same absolute path.
+- Do not write to /aml, /, or any other directory.
+
 $feedback_hint
 "
 
@@ -216,8 +239,18 @@ $feedback_hint
     prepare_optional_agent "$phase" 2>/dev/null || true
 
     # Spawn agent
-    local cli=$(detect_cli)
     local agent_id
+
+    # Always start phases from a clean comm dir to avoid mixing outputs across retries.
+    local comm_dir="$AGENT_COMM_DIR/$STORY_ID"
+    rm -f "$comm_dir/plan.md" \
+      "$comm_dir/implementation-summary.md" \
+      "$comm_dir/review-changes.md" \
+      "$comm_dir/review-approved.md" \
+      "$comm_dir/e2e-report.md" \
+      "$comm_dir/test-results.json" \
+      2>/dev/null || true
+
     agent_id=$(spawn_agent "$phase" "$task_message" "$STORY_ID")
 
     log_info "  Spawned agent: $agent_id"
@@ -240,6 +273,28 @@ $feedback_hint
       # Otherwise, allow retry within this phase.
       ((attempt++))
       continue
+    fi
+
+    # Artifact-based success (phase-specific) to avoid relying solely on marker files.
+    # This is important when the CLI completes the work but doesn't create the marker.
+    local comm_dir="$AGENT_COMM_DIR/$STORY_ID"
+    if [[ "$phase" == "planner" && -f "$comm_dir/plan.md" ]]; then
+      mark_agent_success "$STORY_ID" "$phase" 2>/dev/null || true
+    fi
+    if [[ "$phase" == "coder" ]]; then
+      # Consider coder successful when it leaves behind a work summary artifact.
+      # This avoids brittle reliance on a hidden marker file.
+      if [[ -f "$comm_dir/implementation-summary.md" ]]; then
+        mark_agent_success "$STORY_ID" "$phase" 2>/dev/null || true
+      fi
+    fi
+    if [[ "$phase" == "reviewer" && ( -f "$comm_dir/review-changes.md" || -f "$comm_dir/review-approved.md" ) ]]; then
+      mark_agent_success "$STORY_ID" "$phase" 2>/dev/null || true
+    fi
+    if [[ "$phase" == "tester" ]]; then
+      if [[ -f "$comm_dir/e2e-report.md" || -f "$comm_dir/test-results.json" ]]; then
+        mark_agent_success "$STORY_ID" "$phase" 2>/dev/null || true
+      fi
     fi
 
     # Check if phase succeeded
