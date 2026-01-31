@@ -48,7 +48,7 @@ echo ""
 # Test 1: Check all required files exist
 test_start "Required files exist"
 required_files=(
-  "ralph.sh"
+  "raffaello.sh"
   "orchestrator.sh"
   "merge-stories.sh"
   "lib/logging.sh"
@@ -78,7 +78,7 @@ fi
 
 # Test 2: Check shell scripts are executable
 test_start "Main scripts are executable"
-main_scripts=("ralph.sh" "orchestrator.sh" "merge-stories.sh")
+main_scripts=("raffaello.sh" "orchestrator.sh" "merge-stories.sh")
 all_executable=true
 
 for script in "${main_scripts[@]}"; do
@@ -94,12 +94,12 @@ if $all_executable; then
   test_pass "All main scripts are executable"
 else
   test_fail "Some scripts are not executable"
-  echo "  Run: chmod +x ralph.sh orchestrator.sh merge-stories.sh"
+  echo "  Run: chmod +x raffaello.sh orchestrator.sh merge-stories.sh"
 fi
 
 # Test 3: Check for Bash 3.2 compatibility (no associative arrays)
 test_start "Bash 3.2 compatibility check (no associative arrays)"
-if grep -r "declare -A" ralph.sh orchestrator.sh merge-stories.sh lib/*.sh 2>/dev/null; then
+if grep -r "declare -A" raffaello.sh orchestrator.sh merge-stories.sh lib/*.sh 2>/dev/null; then
   test_fail "Found associative arrays (not compatible with Bash 3.2)"
 else
   test_pass "No associative arrays found"
@@ -109,7 +109,7 @@ fi
 test_start "Unified logging system integration"
 logging_integrated=true
 
-for script in ralph.sh orchestrator.sh merge-stories.sh; do
+for script in raffaello.sh orchestrator.sh merge-stories.sh; do
   if grep -q "source.*lib/logging.sh" "$script"; then
     echo "  ✓ $script uses unified logging"
   else
@@ -126,7 +126,7 @@ fi
 
 # Test 5: Check no hardcoded color definitions in main scripts
 test_start "No hardcoded color definitions in main scripts"
-if grep -E "^(RED|GREEN|YELLOW|BLUE|NC)=" ralph.sh orchestrator.sh merge-stories.sh 2>/dev/null; then
+if grep -E "^(RED|GREEN|YELLOW|BLUE|NC)=" raffaello.sh orchestrator.sh merge-stories.sh 2>/dev/null; then
   test_fail "Found hardcoded color definitions"
 else
   test_pass "No hardcoded color definitions (using lib/logging.sh)"
@@ -143,10 +143,10 @@ else
   trap_found=false
 fi
 
-if grep -q "trap.*EXIT" ralph.sh; then
-  echo "  ✓ ralph.sh has trap cleanup"
+if grep -q "trap.*EXIT" raffaello.sh; then
+  echo "  ✓ raffaello.sh has trap cleanup"
 else
-  echo "  ✗ ralph.sh missing trap cleanup"
+  echo "  ✗ raffaello.sh missing trap cleanup"
   trap_found=false
 fi
 
@@ -357,13 +357,13 @@ fi
 # Test 20: Integration test (if prd.json exists)
 test_start "Integration test (dry-run)"
 if [[ -f "prd.json" ]]; then
-  echo "  Running ralph.sh check prerequisites only..."
+  echo "  Running raffaello.sh check prerequisites only..."
   # This will run the prerequisites check without executing stories
-  if timeout 10s ./ralph.sh 2>&1 | grep -q "Prerequisites check passed" || \
-     timeout 10s ./ralph.sh 2>&1 | grep -q "All stories are complete"; then
-    test_pass "ralph.sh prerequisites check passed"
+  if timeout 10s ./raffaello.sh 2>&1 | grep -q "Prerequisites check passed" || \
+     timeout 10s ./raffaello.sh 2>&1 | grep -q "All stories are complete"; then
+    test_pass "raffaello.sh prerequisites check passed"
   else
-    test_skip "ralph.sh execution requires valid configuration"
+    test_skip "raffaello.sh execution requires valid configuration"
   fi
 else
   test_skip "No prd.json found for integration test"

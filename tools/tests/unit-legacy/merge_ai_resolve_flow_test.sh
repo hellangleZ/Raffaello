@@ -64,7 +64,7 @@ cat >"$tmp/repo/lib/agent-api.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/raffaello}"
 
 spawn_agent() {
   local agent_name=$1

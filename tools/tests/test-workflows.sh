@@ -25,7 +25,7 @@ info() {
   echo -e "${BLUE}→${NC} $1"
 }
 
-echo "=== Ralph Parallel - Workflow System Test ==="
+echo "=== Raffaello - Workflow System Test ==="
 echo ""
 
 # Test 1: List workflows

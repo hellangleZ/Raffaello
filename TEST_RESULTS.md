@@ -48,13 +48,13 @@ Test Suite: Quick Core Tests
 - All scripts use compatible syntax
 
 ### 3. Unified Logging ✅
-- ralph.sh uses lib/logging.sh
+- raffaello.sh uses lib/logging.sh
 - orchestrator.sh uses lib/logging.sh
 - merge-stories.sh uses lib/logging.sh
 - Eliminates 60+ lines of duplication
 
 ### 4. Cleanup Mechanisms ✅
-- ralph.sh has trap cleanup for PID_TRACKING_DIR
+- raffaello.sh has trap cleanup for PID_TRACKING_DIR
 - orchestrator.sh has trap cleanup for RETRY_POLICY_FILE
 - No temp file leaks
 
@@ -111,7 +111,7 @@ grep -r "console.log" . --exclude-dir=node_modules
 - OS: macOS (Darwin 25.2.0)
 - Bash Version: 3.2+ compatible
 - Dependencies: jq, yq, git
-- Project: /Users/chilikevin/aml/ralph-parallel
+- Project: /Users/chilikevin/aml/raffaello
 
 ## Verification Steps
 
@@ -127,7 +127,7 @@ grep -r "console.log" . --exclude-dir=node_modules
 
 1. **Run integration test**
    ```bash
-   ./ralph.sh  # Full execution test
+   ./raffaello.sh  # Full execution test
    ```
 
 2. **Check git status**

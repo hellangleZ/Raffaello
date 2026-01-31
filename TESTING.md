@@ -28,7 +28,7 @@ Run them via:
 ======================================
 
 [TEST] Required files exist
-  ✓ ralph.sh
+  ✓ raffaello.sh
   ✓ orchestrator.sh
   ...
   ✓ PASS All required files exist
@@ -37,7 +37,7 @@ Run them via:
   ✓ PASS No associative arrays found
 
 [TEST] Unified logging system integration
-  ✓ ralph.sh uses unified logging
+  ✓ raffaello.sh uses unified logging
   ✓ orchestrator.sh uses unified logging
   ...
   ✓ PASS Unified logging integrated
@@ -117,7 +117,7 @@ grep -r "declare -A" *.sh lib/*.sh
 
 ```bash
 # 查看logging.sh被正确引用
-grep "source.*logging.sh" ralph.sh orchestrator.sh merge-stories.sh
+grep "source.*logging.sh" raffaello.sh orchestrator.sh merge-stories.sh
 
 # 应该输出3行
 ```
@@ -126,7 +126,7 @@ grep "source.*logging.sh" ralph.sh orchestrator.sh merge-stories.sh
 
 ```bash
 # 查看trap配置
-grep "trap.*EXIT" orchestrator.sh ralph.sh
+grep "trap.*EXIT" orchestrator.sh raffaello.sh
 
 # 应该看到trap cleanup定义
 ```
@@ -173,14 +173,14 @@ cat > prd.json << 'EOF'
 EOF
 ```
 
-### 运行Ralph
+### 运行Raffaello
 
 ```bash
 # 确保在main分支
 git checkout main
 
-# 运行ralph（需要claude CLI）
-./ralph.sh
+# 运行raffaello（需要claude CLI）
+./raffaello.sh
 ```
 
 ### 验证结果
@@ -272,7 +272,7 @@ brew install bash
 
 ```bash
 # 确保在项目根目录
-cd /path/to/ralph-parallel
+cd /path/to/raffaello
 
 # 运行测试
 ./run-tests.sh suite
@@ -283,7 +283,7 @@ cd /path/to/ralph-parallel
 ```bash
 # 添加执行权限
 chmod +x tools/tests/test-improvements.sh
-chmod +x ralph.sh orchestrator.sh merge-stories.sh
+chmod +x raffaello.sh orchestrator.sh merge-stories.sh
 ```
 
 ## CI/CD集成

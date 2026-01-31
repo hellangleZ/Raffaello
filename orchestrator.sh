@@ -17,7 +17,7 @@ if ! bash -n "$0" 2>/dev/null; then
   exit 2
 fi
 
-# Project root directory (inherited from ralph.sh via SCRIPT_DIR)
+# Project root directory (inherited from raffaello.sh via SCRIPT_DIR)
 # Do NOT redefine SCRIPT_DIR here to avoid path collision
 PROJECT_ROOT="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
@@ -95,11 +95,95 @@ get_story_acceptance_criteria() {
 get_baseline_contract_text() {
   local repo_root
   repo_root=$(cd "$(dirname "$PRD_FILE")" && pwd)
-  local contract="$repo_root/${CONTRACT_BASENAME:-BASELINE_CONTRACT.md}"
+  local contract="$repo_root/workflows/${CONTRACT_BASENAME:-BASELINE_CONTRACT.md}"
   if [[ -f "$contract" ]]; then
     echo "
-Baseline Contract (${CONTRACT_BASENAME:-BASELINE_CONTRACT.md}):\n"
+Baseline Contract (workflows/${CONTRACT_BASENAME:-BASELINE_CONTRACT.md}):"
     cat "$contract"
+  fi
+}
+
+# Get baseline environment snapshot (dependencies, toolchain info)
+# Only inject for non-baseline stories
+get_baseline_environment_snapshot() {
+  local repo_root
+  repo_root=$(cd "$(dirname "$PRD_FILE")" && pwd)
+
+  # Check if this is the baseline story (STORY-001 or priority=1)
+  local is_baseline=false
+  local story_priority
+  story_priority=$(get_story | jq -r '.priority // 999')
+  if [[ "$STORY_ID" == "STORY-001" || "$story_priority" == "1" ]]; then
+    is_baseline=true
+  fi
+
+  # Only inject environment info for non-baseline stories
+  if [[ "$is_baseline" == "true" ]]; then
+    return
+  fi
+
+  local has_env=false
+
+  # Node.js / JavaScript
+  if [[ -f "$repo_root/package.json" ]]; then
+    has_env=true
+    echo ""
+    echo "## Baseline Environment (Established by STORY-001)"
+    echo ""
+    echo "### Node.js Dependencies"
+    echo "The following dependencies are already installed. USE THESE instead of adding new ones:"
+    echo '```json'
+    jq '{dependencies, devDependencies}' "$repo_root/package.json" 2>/dev/null || echo "{}"
+    echo '```'
+    echo ""
+    echo "### Available Scripts"
+    echo '```json'
+    jq '.scripts // {}' "$repo_root/package.json" 2>/dev/null || echo "{}"
+    echo '```'
+  fi
+
+  # Python
+  if [[ -f "$repo_root/requirements.txt" ]]; then
+    has_env=true
+    echo ""
+    echo "### Python Dependencies (requirements.txt)"
+    echo '```'
+    cat "$repo_root/requirements.txt"
+    echo '```'
+  fi
+
+  if [[ -f "$repo_root/pyproject.toml" ]]; then
+    has_env=true
+    echo ""
+    echo "### Python Project (pyproject.toml)"
+    echo '```toml'
+    cat "$repo_root/pyproject.toml"
+    echo '```'
+  fi
+
+  # Go
+  if [[ -f "$repo_root/go.mod" ]]; then
+    has_env=true
+    echo ""
+    echo "### Go Modules (go.mod)"
+    echo '```'
+    cat "$repo_root/go.mod"
+    echo '```'
+  fi
+
+  # Rust
+  if [[ -f "$repo_root/Cargo.toml" ]]; then
+    has_env=true
+    echo ""
+    echo "### Rust Dependencies (Cargo.toml)"
+    echo '```toml'
+    cat "$repo_root/Cargo.toml"
+    echo '```'
+  fi
+
+  if [[ "$has_env" == "true" ]]; then
+    echo ""
+    echo "**IMPORTANT**: If you need to add new dependencies, document the reason in implementation-summary.md"
   fi
 }
 
@@ -218,6 +302,7 @@ Description: $(get_story_description)
 Acceptance Criteria:
 $(get_story_acceptance_criteria)
 $(get_baseline_contract_text)
+$(get_baseline_environment_snapshot)
 
 Communication Directory (absolute path): $comm_dir
 

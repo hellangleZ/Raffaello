@@ -1,8 +1,8 @@
-# Ralph Parallel vs Original Ralph - Detailed Comparison
+# Raffaello vs Original Ralph - Detailed Comparison
 
 > **English** | [中文](#中文版本)
 
-This document provides a comprehensive comparison between Ralph Parallel and the original Ralph autonomous agent system.
+This document provides a comprehensive comparison between Raffaello and the original Ralph autonomous agent system.
 
 ## Table of Contents
 
@@ -16,14 +16,14 @@ This document provides a comprehensive comparison between Ralph Parallel and the
 
 ## Executive Summary
 
-| Aspect | Original Ralph | Ralph Parallel | Winner |
+| Aspect | Original Ralph | Raffaello | Winner |
 |--------|---------------|----------------|---------|
-| **Execution Speed** | Sequential (N × time) | Parallel (N/3 × time) | Ralph Parallel (3x faster) |
+| **Execution Speed** | Sequential (N × time) | Parallel (N/3 × time) | Raffaello (3x faster) |
 | **Complexity** | Low (single agent loop) | Medium (orchestration) | Original Ralph (simpler) |
-| **Agent Utilization** | Single agent reused | Multi-agent specialized | Ralph Parallel (better architecture) |
+| **Agent Utilization** | Single agent reused | Multi-agent specialized | Raffaello (better architecture) |
 | **Conflict Handling** | None needed (sequential) | Smart 3-tier system | Tie (different needs) |
 | **Setup Time** | Minutes | Hours | Original Ralph (faster start) |
-| **Scalability** | Poor (linear scaling) | Good (sub-linear scaling) | Ralph Parallel (better for large projects) |
+| **Scalability** | Poor (linear scaling) | Good (sub-linear scaling) | Raffaello (better for large projects) |
 | **Best For** | 1-5 stories, simple PRDs | 10+ stories, complex PRDs | Context-dependent |
 
 ## Architecture Comparison
@@ -32,7 +32,7 @@ This document provides a comprehensive comparison between Ralph Parallel and the
 
 ```
 ┌─────────────────────────────────┐
-│          ralph.sh               │
+│          raffaello.sh               │
 │  (Single-agent loop)            │
 └────────────┬────────────────────┘
              │
@@ -76,11 +76,11 @@ This document provides a comprehensive comparison between Ralph Parallel and the
 - No merge conflicts (serial commits)
 - Simple loop: `while has_pending_stories; do execute_next_story; done`
 
-### Ralph Parallel
+### Raffaello
 
 ```
 ┌─────────────────────────────────────────┐
-│            ralph.sh                     │
+│            raffaello.sh                     │
 │  (Parallel orchestrator)                │
 └───────┬─────────────────────────────────┘
         │
@@ -166,7 +166,7 @@ claude < CLAUDE.md
 - Single agent does everything (no specialization)
 - Can't utilize multiple agents simultaneously
 
-### Ralph Parallel
+### Raffaello
 
 **Workflow**:
 1. Read PRD
@@ -180,7 +180,7 @@ claude < CLAUDE.md
 **Example (3 stories, no dependencies)**:
 ```bash
 # All 3 stories execute concurrently
-./ralph.sh
+./raffaello.sh
 
 # Batch 1: US001, US002, US003 (parallel)
 ├─ Story US001 (branch: story-US001)
@@ -231,7 +231,7 @@ claude < CLAUDE.md
 - Each story takes T minutes
 - Total time = N × T
 
-**Ralph Parallel**: O(N/P + M) where:
+**Raffaello**: O(N/P + M) where:
 - N = number of stories
 - P = max parallel stories (3)
 - M = merge time
@@ -244,7 +244,7 @@ claude < CLAUDE.md
 | System | Time | Calculation |
 |--------|------|-------------|
 | Original Ralph | 300 min (5 hours) | 10 × 30 min |
-| Ralph Parallel | 105 min (1.75 hours) | (10/3) × 30 min + 5 min = 105 min |
+| Raffaello | 105 min (1.75 hours) | (10/3) × 30 min + 5 min = 105 min |
 | **Speedup** | **2.9x** | |
 
 #### Scenario 2: 20 Stories with Dependencies
@@ -260,7 +260,7 @@ Batch 4: 3 stories (depend on Batch 3)
 | System | Time | Calculation |
 |--------|------|-------------|
 | Original Ralph | 600 min (10 hours) | 20 × 30 min |
-| Ralph Parallel | 245 min (4 hours) | 4 batches, each ≈60 min + merge overhead |
+| Raffaello | 245 min (4 hours) | 4 batches, each ≈60 min + merge overhead |
 | **Speedup** | **2.4x** | |
 
 #### Scenario 3: 3 Stories (Small PRD)
@@ -268,10 +268,10 @@ Batch 4: 3 stories (depend on Batch 3)
 | System | Time | Calculation |
 |--------|------|-------------|
 | Original Ralph | 90 min | 3 × 30 min |
-| Ralph Parallel | 35 min | 1 batch × 30 min + 5 min merge |
+| Raffaello | 35 min | 1 batch × 30 min + 5 min merge |
 | **Speedup** | **2.6x** | |
 
-**Note**: Ralph Parallel has overhead (dependency analysis, branch management, merging), so speedup is slightly less than theoretical 3x.
+**Note**: Raffaello has overhead (dependency analysis, branch management, merging), so speedup is slightly less than theoretical 3x.
 
 ### Token Cost Comparison
 
@@ -285,7 +285,7 @@ Total tokens: 10 × 100K = 1M tokens
 Cost (Opus 4): 1M tokens
 ```
 
-**Ralph Parallel**:
+**Raffaello**:
 ```
 Total tokens per story:
   - planner: 20K tokens (Haiku)
@@ -298,7 +298,7 @@ Total tokens: 10 × 120K = 1.2M tokens
 Cost: 1.2M tokens (20% more)
 ```
 
-**Trade-off**: Ralph Parallel uses 20% more tokens but completes 2.5x faster.
+**Trade-off**: Raffaello uses 20% more tokens but completes 2.5x faster.
 
 ## Use Cases
 
@@ -336,7 +336,7 @@ Cost: 1.2M tokens (20% more)
 }
 ```
 
-### When to Use Ralph Parallel
+### When to Use Raffaello
 
 ✅ **Best For**:
 1. **Large PRDs** (10+ stories)
@@ -377,7 +377,7 @@ Cost: 1.2M tokens (20% more)
 
 ## Migration Guide
 
-### From Original Ralph to Ralph Parallel
+### From Original Ralph to Raffaello
 
 **Step 1: Install Dependencies**
 ```bash
@@ -413,9 +413,9 @@ Add `workflow` and `dependencies` fields:
 ./lib/dependency-analyzer.sh prd.json
 ```
 
-**Step 5: Run Ralph Parallel**
+**Step 5: Run Raffaello**
 ```bash
-./ralph.sh
+./raffaello.sh
 ```
 
 **Step 6: Handle Conflicts**
@@ -432,7 +432,7 @@ git add .
 git commit
 ```
 
-### From Ralph Parallel Back to Original Ralph
+### From Raffaello Back to Original Ralph
 
 **Use Case**: Small PRD, not worth parallel overhead
 
@@ -459,8 +459,8 @@ Remove `workflow` and `dependencies` fields:
 **Step 3: Use Original Ralph**
 ```bash
 cd path/to/original-ralph
-cp path/to/ralph-parallel/prd.json .
-./ralph.sh
+cp path/to/raffaello/prd.json .
+./raffaello.sh
 ```
 
 ## Trade-offs
@@ -473,13 +473,13 @@ cp path/to/ralph-parallel/prd.json .
 - ❌ Slow (sequential)
 - ❌ No specialization
 
-**Ralph Parallel**:
+**Raffaello**:
 - ❌ Complex (8+ scripts, 5 agents)
 - ❌ Harder to debug
 - ✅ Fast (parallel)
 - ✅ Specialized agents
 
-**Recommendation**: Use Ralph Parallel for ≥10 stories, Original Ralph for <10 stories.
+**Recommendation**: Use Raffaello for ≥10 stories, Original Ralph for <10 stories.
 
 ### Token Cost vs Quality
 
@@ -488,12 +488,12 @@ cp path/to/ralph-parallel/prd.json .
 - ❌ No mandatory review
 - ❌ Possible lower quality
 
-**Ralph Parallel**:
+**Raffaello**:
 - ❌ More tokens (4 agents per story)
 - ✅ Mandatory review phase
 - ✅ Better code quality
 
-**Recommendation**: Use Ralph Parallel for production code, Original Ralph for experiments.
+**Recommendation**: Use Raffaello for production code, Original Ralph for experiments.
 
 ### Setup Time vs Execution Time
 
@@ -501,15 +501,15 @@ cp path/to/ralph-parallel/prd.json .
 - ✅ Minutes to setup
 - ❌ Hours to execute large PRD
 
-**Ralph Parallel**:
+**Raffaello**:
 - ❌ Hours to setup initially
 - ✅ Minutes to execute large PRD
 
-**Recommendation**: Upfront investment in Ralph Parallel pays off for repeated use.
+**Recommendation**: Upfront investment in Raffaello pays off for repeated use.
 
 ## Feature Comparison Table
 
-| Feature | Original Ralph | Ralph Parallel |
+| Feature | Original Ralph | Raffaello |
 |---------|---------------|----------------|
 | **Core Features** | | |
 | PRD execution | ✅ | ✅ |
@@ -569,7 +569,7 @@ cp path/to/ralph-parallel/prd.json .
 - Learning/experimenting
 - Don't need code review
 
-**Use Ralph Parallel** if:
+**Use Raffaello** if:
 - PRD has ≥10 stories
 - Stories are independent
 - Quality is critical
@@ -578,17 +578,17 @@ cp path/to/ralph-parallel/prd.json .
 
 ### The Future
 
-Ralph Parallel is designed for scalability. As projects grow larger (50+ stories, 100+ stories), the benefits of parallel execution and specialized agents become increasingly significant.
+Raffaello is designed for scalability. As projects grow larger (50+ stories, 100+ stories), the benefits of parallel execution and specialized agents become increasingly significant.
 
-Original Ralph remains excellent for small projects and learning, but Ralph Parallel is the recommended choice for production workloads.
+Original Ralph remains excellent for small projects and learning, but Raffaello is the recommended choice for production workloads.
 
 ---
 
 # 中文版本
 
-> [English](#ralph-parallel-vs-original-ralph---detailed-comparison) | **中文**
+> [English](#raffaello-vs-original-ralph---detailed-comparison) | **中文**
 
-本文档提供 Ralph Parallel 和原始 Ralph 自主代理系统之间的全面比较。
+本文档提供 Raffaello 和原始 Ralph 自主代理系统之间的全面比较。
 
 ## 目录
 
@@ -609,7 +609,7 @@ Original Ralph remains excellent for small projects and learning, but Ralph Para
 - 学习/实验
 - 不需要代码审查
 
-**使用 Ralph Parallel** 如果：
+**使用 Raffaello** 如果：
 - PRD 有 ≥10 个故事
 - 故事独立
 - 质量关键
@@ -618,10 +618,10 @@ Original Ralph remains excellent for small projects and learning, but Ralph Para
 
 ### 未来展望
 
-Ralph Parallel 为可扩展性而设计。随着项目规模增大（50+ 故事，100+ 故事），并行执行和专业化代理的优势变得越来越显著。
+Raffaello 为可扩展性而设计。随着项目规模增大（50+ 故事，100+ 故事），并行执行和专业化代理的优势变得越来越显著。
 
-原始 Ralph 对于小型项目和学习仍然很好，但 Ralph Parallel 是生产工作负载的推荐选择。
+原始 Ralph 对于小型项目和学习仍然很好，但 Raffaello 是生产工作负载的推荐选择。
 
 ---
 
-**Ralph Parallel** - 详细对比分析
+**Raffaello** - 详细对比分析

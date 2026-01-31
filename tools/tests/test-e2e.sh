@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# End-to-End Test for Ralph Parallel
+# End-to-End Test for Raffaello
 # Tests complete workflow with test project
 
 set -euo pipefail
@@ -31,7 +31,7 @@ warn() {
   echo -e "${YELLOW}⚠${NC} $1"
 }
 
-echo "=== Ralph Parallel - End-to-End Test ==="
+echo "=== Raffaello - End-to-End Test ==="
 echo ""
 
 # Test 1: Prerequisites
@@ -195,9 +195,9 @@ echo "  ✓ Test project ready"
 echo "  ✓ PRD format validated"
 echo "  ✓ All documentation present"
 echo ""
-echo "Ralph Parallel is ready for production use!"
+echo "Raffaello is ready for production use!"
 echo ""
 echo "Next steps:"
 echo "  1. cd test-project"
-echo "  2. ../ralph.sh (to run full workflow - requires AI CLI)"
+echo "  2. ../raffaello.sh (to run full workflow - requires AI CLI)"
 echo "  3. Check git branches and commits"

@@ -43,7 +43,7 @@ fi
 
 # Test 2: No associative arrays
 echo "[2/8] Checking Bash 3.2 compatibility..."
-if grep -r "declare -A" ralph.sh orchestrator.sh lib/*.sh 2>/dev/null; then
+if grep -r "declare -A" raffaello.sh orchestrator.sh lib/*.sh 2>/dev/null; then
   echo "✗ Found incompatible associative arrays"
   exit 1
 else
@@ -52,7 +52,7 @@ fi
 
 # Test 3: Logging integrated
 echo "[3/8] Checking unified logging..."
-if grep -q "source.*lib/logging.sh" ralph.sh orchestrator.sh merge-stories.sh; then
+if grep -q "source.*lib/logging.sh" raffaello.sh orchestrator.sh merge-stories.sh; then
   echo "✓ Unified logging integrated"
 else
   echo "✗ Missing logging integration"
@@ -61,7 +61,7 @@ fi
 
 # Test 4: Trap cleanup
 echo "[4/8] Checking trap cleanup..."
-if grep -q "trap.*EXIT" ralph.sh orchestrator.sh; then
+if grep -q "trap.*EXIT" raffaello.sh orchestrator.sh; then
   echo "✓ Trap cleanup configured"
 else
   echo "✗ Missing trap cleanup"
@@ -183,5 +183,5 @@ esac
 
 echo ""
 echo "Next steps:"
-echo "  - Run '/aml/raffaello/bin/ralph-start.sh --project-dir <DIR>' to execute stories"
-echo "  - See docs/RALPH-RUNBOOK.md for start → monitor → merge → finish"
+echo "  - Run '/aml/raffaello/bin/raffaello-start.sh --project-dir <DIR>' to execute stories"
+echo "  - See docs/RAFFAELLO-RUNBOOK.md for start → monitor → merge → finish"

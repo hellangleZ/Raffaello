@@ -1,41 +1,41 @@
 #!/usr/bin/env bash
-# Ralph Parallel - Main Execution Loop
+# Raffaello - Main Execution Loop
 # Orchestrates parallel execution of multiple user stories
 
 set -euo pipefail
 
 # Ensure we always capture a primary run log even if the terminal closes.
-LOG_DIR_DEFAULT="$(pwd)/.ralph-logs"
+LOG_DIR_DEFAULT="$(pwd)/.raffaello-logs"
 LOG_DIR="${LOG_DIR:-$LOG_DIR_DEFAULT}"
 mkdir -p "$LOG_DIR"
-MAIN_LOG_FILE_DEFAULT="$LOG_DIR/ralph-main.log"
+MAIN_LOG_FILE_DEFAULT="$LOG_DIR/raffaello-main.log"
 MAIN_LOG_FILE="${MAIN_LOG_FILE:-$MAIN_LOG_FILE_DEFAULT}"
 
 # Best-effort: mirror stdout/stderr to a file without relying on a pipeline in the caller.
 # NOTE: If we hard-redirect stdout/stderr here, interactive prompts may appear to "hang".
 # Keep terminal output by default; allow opt-in to full redirection.
-if [[ -z "${RALPH_MAIN_LOG_STARTED:-}" ]]; then
-  export RALPH_MAIN_LOG_STARTED=1
-  if [[ "${RALPH_REDIRECT_STDOUT:-false}" == "true" ]]; then
+if [[ -z "${RAFFAELLO_MAIN_LOG_STARTED:-}" ]]; then
+  export RAFFAELLO_MAIN_LOG_STARTED=1
+  if [[ "${RAFFAELLO_REDIRECT_STDOUT:-false}" == "true" ]]; then
     exec >>"$MAIN_LOG_FILE" 2>&1
   else
     # Avoid process substitution here: it creates extra bash processes and can
     # interfere with lock fds, leading to confusing errors like "flock: 200: Bad file descriptor".
     # Users can tee externally if needed:
-    #   ../raffaello/ralph.sh 2>&1 | tee -a .ralph-logs/ralph-main.log
+    #   ../raffaello/raffaello.sh 2>&1 | tee -a .raffaello-logs/raffaello-main.log
     :
   fi
 fi
 
-_ralph_last_command=""
-trap '_ralph_last_command="$BASH_COMMAND"' DEBUG
+_raffaello_last_command=""
+trap '_raffaello_last_command="$BASH_COMMAND"' DEBUG
 
-_ralph_on_exit() {
+_raffaello_on_exit() {
   local exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
-    printf '[FATAL] ralph.sh exiting rc=%s last_cmd=%q\n' "$exit_code" "${_ralph_last_command:-}" >&2
+    printf '[FATAL] raffaello.sh exiting rc=%s last_cmd=%q\n' "$exit_code" "${_raffaello_last_command:-}" >&2
   else
-    printf '[INFO] ralph.sh exiting rc=0\n' >&2
+    printf '[INFO] raffaello.sh exiting rc=0\n' >&2
   fi
 }
 # Script directory
@@ -51,13 +51,13 @@ source "$SCRIPT_DIR/lib/prd-validator.sh"
 export LOG_PREFIX="INFO"
 source "$SCRIPT_DIR/lib/logging.sh"
 
-# Configuration
+# Configuration defaults (can be overridden by CLI args or env vars)
 MAX_PARALLEL_STORIES=${MAX_PARALLEL_STORIES:-3}
 LOG_DIR="$LOG_DIR"
 
-# Global rerun budget across all stories in a single ralph.sh run.
-# If any story fails, ralph will try again in another iteration until budget is exhausted.
-GLOBAL_MAX_ITERATIONS=${GLOBAL_MAX_ITERATIONS:-1}
+# Global rerun budget across all stories in a single raffaello.sh run.
+# If any story fails, raffaello will try again in another iteration until budget is exhausted.
+GLOBAL_MAX_ITERATIONS=${GLOBAL_MAX_ITERATIONS:-20}
 
 # Optional watchdog to kill stalled agents and unblock orchestration.
 # Off by default for safety; enable to automatically enforce stall handling.
@@ -67,11 +67,72 @@ MONITOR_STALL_SECS=${MONITOR_STALL_SECS:-300}
 
 # Avoid hangs when stdin is non-interactive (e.g. running under nohup or when stdout is redirected
 # to MAIN_LOG_FILE). Set to true to auto-confirm safe prompts.
-RALPH_ASSUME_YES=${RALPH_ASSUME_YES:-false}
+RAFFAELLO_ASSUME_YES=${RAFFAELLO_ASSUME_YES:-false}
+
+# Parse command line arguments
+show_help() {
+  cat <<EOF
+Usage: raffaello.sh [OPTIONS]
+
+Options:
+  --max-iterations N    Maximum iterations to retry failed stories (default: 20)
+  --max-parallel N      Maximum parallel stories per batch (default: 3)
+  --auto-kill           Enable auto-kill for stalled agents
+  --stall-secs N        Seconds before agent is considered stalled (default: 300)
+  --yes, -y             Auto-confirm prompts (non-interactive mode)
+  --help, -h            Show this help message
+
+Environment variables:
+  GLOBAL_MAX_ITERATIONS   Same as --max-iterations
+  MAX_PARALLEL_STORIES    Same as --max-parallel
+  AUTO_MONITOR_KILL       Same as --auto-kill (set to "true")
+  MONITOR_STALL_SECS      Same as --stall-secs
+  RAFFAELLO_ASSUME_YES        Same as --yes (set to "true")
+
+Examples:
+  raffaello.sh --max-iterations 10 --max-parallel 5
+  raffaello.sh --auto-kill --stall-secs 180
+  raffaello.sh -y
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --max-iterations)
+      GLOBAL_MAX_ITERATIONS="$2"
+      shift 2
+      ;;
+    --max-parallel)
+      MAX_PARALLEL_STORIES="$2"
+      shift 2
+      ;;
+    --auto-kill)
+      AUTO_MONITOR_KILL=true
+      shift
+      ;;
+    --stall-secs)
+      MONITOR_STALL_SECS="$2"
+      shift 2
+      ;;
+    --yes|-y)
+      RAFFAELLO_ASSUME_YES=true
+      shift
+      ;;
+    --help|-h)
+      show_help
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      show_help
+      exit 1
+      ;;
+  esac
+done
 
 # Guard against accidental multi-start in the same project directory.
 # Use a PID file lock (not flock) to avoid fd portability issues.
-LOCK_FILE="${RALPH_LOCK_FILE:-$LOG_DIR/ralph.pid}"
+LOCK_FILE="${RAFFAELLO_LOCK_FILE:-$LOG_DIR/raffaello.pid}"
 
 acquire_pid_lock() {
   mkdir -p "$LOG_DIR" 2>/dev/null || true
@@ -80,7 +141,7 @@ acquire_pid_lock() {
     local existing_pid
     existing_pid=$(tr -d ' \n\r\t' <"$LOCK_FILE" 2>/dev/null || true)
     if [[ "$existing_pid" =~ ^[0-9]+$ ]] && kill -0 "$existing_pid" 2>/dev/null; then
-      log_error "Another ralph.sh is already running for this project (pid=$existing_pid)."
+      log_error "Another raffaello.sh is already running for this project (pid=$existing_pid)."
       log_error "If you're sure it's stale, run: bash $SCRIPT_DIR/raffaello/kill-all.sh --project-dir $(pwd)"
       exit 1
     fi
@@ -117,7 +178,7 @@ fi
 PID_TRACKING_DIR=$(mktemp -d)
 
 # Keep a single EXIT trap handler so multiple sections don't overwrite each other.
-_ralph_cleanup() {
+_raffaello_cleanup() {
   # Remove temp pid tracker
   rm -rf "$PID_TRACKING_DIR" 2>/dev/null || true
 
@@ -131,10 +192,10 @@ _ralph_cleanup() {
   fi
 
   release_pid_lock
-  _ralph_on_exit
+  _raffaello_on_exit
 }
 
-trap _ralph_cleanup EXIT
+trap _raffaello_cleanup EXIT
 
 # Cleanup worktrees on interrupt
 cleanup_worktrees() {
@@ -165,14 +226,14 @@ cleanup_worktrees() {
   fi
 
   # Then clean up worktrees
-  if [[ -d "$PWD/.ralph-worktrees" ]]; then
+  if [[ -d "$PWD/.raffaello-worktrees" ]]; then
     log_info "Cleaning up worktrees due to interrupt..."
-    for worktree_path in "$PWD/.ralph-worktrees"/*; do
+    for worktree_path in "$PWD/.raffaello-worktrees"/*; do
       if [[ -d "$worktree_path" ]]; then
         git worktree remove "$worktree_path" 2>/dev/null || true
       fi
     done
-    rmdir "$PWD/.ralph-worktrees" 2>/dev/null || true
+    rmdir "$PWD/.raffaello-worktrees" 2>/dev/null || true
     git worktree prune 2>/dev/null || true
   fi
 
@@ -227,7 +288,7 @@ check_prerequisites() {
   if ! git rev-parse --git-dir &>/dev/null; then
     log_warn "Current directory is not a git repository"
     echo ""
-    echo "Ralph uses git branches to isolate work for each user story."
+    echo "Raffaello uses git branches to isolate work for each user story."
     echo "This allows parallel execution and easy rollback if needed."
     echo ""
 
@@ -246,13 +307,13 @@ check_prerequisites() {
       echo "Please:"
       echo "  1. Create a dedicated project directory"
       echo "  2. cd into that directory"
-      echo "  3. Run ralph.sh again"
+      echo "  3. Run raffaello.sh again"
       echo ""
       echo "Example:"
       echo "  mkdir -p ~/projects/my-project"
       echo "  cd ~/projects/my-project"
       echo "  cp /path/to/prd.json ."
-      echo "  /path/to/ralph.sh"
+      echo "  /path/to/raffaello.sh"
       exit 1
     fi
 
@@ -333,13 +394,13 @@ check_prerequisites() {
     echo "Type 'yes' to proceed, anything else to abort:"
 
     local answer
-    if [[ "$RALPH_ASSUME_YES" == "true" ]]; then
+    if [[ "$RAFFAELLO_ASSUME_YES" == "true" ]]; then
       answer="yes"
-      echo "[INFO] RALPH_ASSUME_YES=true: auto-confirmed" >&2
+      echo "[INFO] RAFFAELLO_ASSUME_YES=true: auto-confirmed" >&2
     else
       if [[ ! -t 0 ]]; then
         log_error "stdin is not interactive; refusing to wait for confirmation"
-        log_error "Re-run with RALPH_ASSUME_YES=true or start ralph.sh in an interactive terminal"
+        log_error "Re-run with RAFFAELLO_ASSUME_YES=true or start raffaello.sh in an interactive terminal"
         exit 1
       fi
       read -r answer
@@ -369,13 +430,13 @@ check_prerequisites() {
       echo "About to stage $file_count files. Continue? (yes/no)"
 
       local confirm
-      if [[ "$RALPH_ASSUME_YES" == "true" ]]; then
+      if [[ "$RAFFAELLO_ASSUME_YES" == "true" ]]; then
         confirm="yes"
-        echo "[INFO] RALPH_ASSUME_YES=true: auto-confirmed" >&2
+        echo "[INFO] RAFFAELLO_ASSUME_YES=true: auto-confirmed" >&2
       else
         if [[ ! -t 0 ]]; then
           log_error "stdin is not interactive; refusing to wait for confirmation"
-          log_error "Re-run with RALPH_ASSUME_YES=true or start ralph.sh in an interactive terminal"
+          log_error "Re-run with RAFFAELLO_ASSUME_YES=true or start raffaello.sh in an interactive terminal"
           rm -rf .git
           exit 1
         fi
@@ -395,7 +456,7 @@ check_prerequisites() {
         log_error "git commit failed (this is okay if there are no files)"
       fi
     else
-      log_error "Git repository required to use Ralph"
+      log_error "Git repository required to use Raffaello"
       echo ""
       echo "To initialize manually in the correct directory:"
       echo "  cd /path/to/your/project"
@@ -412,7 +473,7 @@ check_prerequisites() {
   if [[ -n "$current_branch" && "$current_branch" != "main" && "$current_branch" != "master" ]]; then
     log_warn "Not on main/master branch (currently on: $current_branch)"
     echo ""
-    echo "Ralph works best when starting from main/master branch."
+    echo "Raffaello works best when starting from main/master branch."
     echo "Would you like to checkout main? (y/n)"
     read -r answer
     if [[ "$answer" =~ ^[Yy] ]]; then
@@ -503,11 +564,11 @@ execute_story() {
   fi
 
   local branch_name="story-$story_id"
-  local worktree_dir="$PWD/.ralph-worktrees/$story_id"
+  local worktree_dir="$PWD/.raffaello-worktrees/$story_id"
 
   # IMPORTANT: avoid stale phase markers across runs.
-  # /tmp/ralph-parallel is shared; old .<phase>-success files can cause false PASS.
-  local agent_comm_dir="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+  # /tmp/raffaello is shared; old .<phase>-success files can cause false PASS.
+  local agent_comm_dir="${AGENT_COMM_DIR:-/tmp/raffaello}"
   rm -rf "$agent_comm_dir/$story_id" 2>/dev/null || true
   mkdir -p "$agent_comm_dir/$story_id" 2>/dev/null || true
 
@@ -601,7 +662,7 @@ execute_story() {
 
 # Main execution loop
 main() {
-  log_info "=== Ralph Parallel - Starting Execution ==="
+  log_info "=== Raffaello - Starting Execution ==="
   echo ""
 
   acquire_pid_lock
@@ -650,10 +711,10 @@ main() {
   echo "   tail -f $LOG_DIR/<STORY_ID>.log"
   echo ""
   echo "Common debugging commands:"
-  echo "   ls -la ${AGENT_COMM_DIR:-/tmp/ralph-parallel}/<STORY_ID>/"
-  echo "   tail -f ${AGENT_COMM_DIR:-/tmp/ralph-parallel}/<STORY_ID>/<PHASE>-output.txt"
-  echo "   cat ${AGENT_COMM_DIR:-/tmp/ralph-parallel}/<STORY_ID>/<PHASE>.pid"
-  echo "   pid=\$(cat ${AGENT_COMM_DIR:-/tmp/ralph-parallel}/<STORY_ID>/<PHASE>.pid 2>/dev/null || true); [[ -n \"\$pid\" ]] && ps -p \"\$pid\" -o pid,ppid,cmd || echo \"no pid\""
+  echo "   ls -la ${AGENT_COMM_DIR:-/tmp/raffaello}/<STORY_ID>/"
+  echo "   tail -f ${AGENT_COMM_DIR:-/tmp/raffaello}/<STORY_ID>/<PHASE>-output.txt"
+  echo "   cat ${AGENT_COMM_DIR:-/tmp/raffaello}/<STORY_ID>/<PHASE>.pid"
+  echo "   pid=\$(cat ${AGENT_COMM_DIR:-/tmp/raffaello}/<STORY_ID>/<PHASE>.pid 2>/dev/null || true); [[ -n \"\$pid\" ]] && ps -p \"\$pid\" -o pid,ppid,cmd || echo \"no pid\""
   echo "Monitor (optional):"
   echo "   nohup $SCRIPT_DIR/raffaello/monitor.sh \"$(pwd)\" > $LOG_DIR/monitor.nohup.log 2>&1 &"
   echo "   tail -f $LOG_DIR/monitor.nohup.log"
@@ -756,16 +817,25 @@ main() {
     done
 
     echo ""
-      ((batch_idx++))
+      ((batch_idx++)) || true
     done
 
-    if [[ $any_failed -eq 0 ]]; then
+    # Check if all stories are now complete
+    local remaining_incomplete
+    remaining_incomplete=$(get_incomplete_stories)
+    if [[ -z "$remaining_incomplete" ]]; then
+      log_success "All stories completed in this iteration!"
       break
     fi
 
-    if [[ $iteration -lt $GLOBAL_MAX_ITERATIONS ]]; then
-      log_warn "Some stories failed; rerunning incomplete stories (next iteration)"
-      echo ""
+    if [[ $any_failed -eq 0 ]]; then
+      # No failures but still incomplete stories - continue to next iteration
+      log_info "Batch completed successfully, continuing with remaining stories..."
+    else
+      if [[ $iteration -lt $GLOBAL_MAX_ITERATIONS ]]; then
+        log_warn "Some stories failed; rerunning incomplete stories (next iteration)"
+        echo ""
+      fi
     fi
 
     ((iteration++))
@@ -773,8 +843,8 @@ main() {
 
   # Clean up worktrees
   log_info "Cleaning up worktrees..."
-  if [[ -d "$PWD/.ralph-worktrees" ]]; then
-    for worktree_path in "$PWD/.ralph-worktrees"/*; do
+  if [[ -d "$PWD/.raffaello-worktrees" ]]; then
+    for worktree_path in "$PWD/.raffaello-worktrees"/*; do
       if [[ -d "$worktree_path" ]]; then
         git worktree remove "$worktree_path" 2>/dev/null || {
           log_warn "Failed to remove worktree: $worktree_path, forcing cleanup"
@@ -782,17 +852,17 @@ main() {
         }
       fi
     done
-    rmdir "$PWD/.ralph-worktrees" 2>/dev/null || true
+    rmdir "$PWD/.raffaello-worktrees" 2>/dev/null || true
   fi
   git worktree prune 2>/dev/null || true
   log_success "Worktrees cleaned up"
   echo ""
 
   # Clean up agent communication dirs for this project run.
-  # /tmp/ralph-parallel is shared across runs; leaving old STORY-* dirs around confuses monitoring
+  # /tmp/raffaello is shared across runs; leaving old STORY-* dirs around confuses monitoring
   # and can contribute to stale state issues.
   log_info "Cleaning up agent communication directories..."
-  local agent_comm_dir="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+  local agent_comm_dir="${AGENT_COMM_DIR:-/tmp/raffaello}"
   rm -rf "$agent_comm_dir"/STORY-[0-9]* 2>/dev/null || true
   log_success "Agent communication directories cleaned"
   echo ""
@@ -806,7 +876,7 @@ main() {
   fi
 
   echo ""
-  log_success "=== Ralph Parallel - Execution Complete ==="
+  log_success "=== Raffaello - Execution Complete ==="
 
   release_pid_lock
 }

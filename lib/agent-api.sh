@@ -9,11 +9,28 @@ LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$LIB_DIR/detect-cli.sh"
 
 # Temporary directory for agent communication
-AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/raffaello}"
 mkdir -p "$AGENT_COMM_DIR"
 
 DEFAULT_CLAUDE_TOOLS=${DEFAULT_CLAUDE_TOOLS:-"Bash,Read,Write,Edit,Glob,Grep"}
 DEFAULT_CLAUDE_MODEL=${DEFAULT_CLAUDE_MODEL:-"sonnet"}
+
+# Check if phase-specific artifacts exist (indicates successful completion)
+# Args: $1=story_id, $2=phase
+# Returns: 0 if artifacts found, 1 otherwise
+check_phase_artifacts() {
+  local story_id=$1
+  local phase=$2
+  local comm_dir="$AGENT_COMM_DIR/$story_id"
+
+  case "$phase" in
+    planner) [[ -f "$comm_dir/plan.md" ]] ;;
+    coder) [[ -f "$comm_dir/implementation-summary.md" ]] ;;
+    reviewer) [[ -f "$comm_dir/review-changes.md" || -f "$comm_dir/review-approved.md" ]] ;;
+    tester) [[ -f "$comm_dir/e2e-report.md" || -f "$comm_dir/test-results.json" ]] ;;
+    *) false ;;
+  esac
+}
 
 # Spawn an agent with a specific role
 # Args: $1=agent_name, $2=task_message, $3=story_id (optional)
@@ -61,10 +78,11 @@ Communication Directory: $AGENT_COMM_DIR/$story_id"
   # - Prefer `--allowed-tools` to avoid interactive tool gating.
   # Feed the prompt via stdin. Also add the communication directory to Claude's
   # tool allowlist so file operations are permitted.
+  # Note: --model removed to use settings.json default (ANTHROPIC_MODEL)
+  # This avoids compatibility issues with proxy configurations
   COMMUNICATION_DIRECTORY="$AGENT_COMM_DIR/$story_id" \
     stdbuf -oL -eL bash -lc \
       "claude -p \
-        --model '$DEFAULT_CLAUDE_MODEL' \
         --no-session-persistence \
         --permission-mode bypassPermissions \
         --add-dir '$AGENT_COMM_DIR/$story_id' \
@@ -126,7 +144,13 @@ wait_for_agent() {
         return 0
       fi
 
-      # If process already exited and no success marker, stop waiting.
+      # Check artifacts early and often - Claude CLI -p mode may not produce
+      # incremental output, but artifacts indicate real progress/completion.
+      if check_phase_artifacts "$story_id" "$agent_name"; then
+        return 0  # Artifacts found = success
+      fi
+
+      # If process already exited and no success marker or artifacts, fail.
       if ! kill -0 "$agent_pid" 2>/dev/null; then
         return 1
       fi
@@ -144,6 +168,8 @@ wait_for_agent() {
         ((idle_elapsed += check_interval))
       fi
 
+      # Idle timeout only applies when no artifacts exist yet.
+      # This prevents false timeouts when Claude is working but not outputting.
       if [[ $idle_elapsed -ge $idle_timeout ]]; then
         echo "WARNING: Agent $agent_name has no new output for ${idle_timeout}s" >&2
         return 1

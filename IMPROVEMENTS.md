@@ -6,7 +6,7 @@ This document summarizes all the improvements made to the Raffaello codebase.
 
 ## ✅ Bugs Fixed
 
-### 1. CRITICAL: ralph.sh:188 - Associative Array Bug
+### 1. CRITICAL: raffaello.sh:188 - Associative Array Bug
 **Issue**: Used Bash 4+ associative arrays on macOS (Bash 3.2)
 ```bash
 # Before (BROKEN)
@@ -36,7 +36,7 @@ fi
 ```
 **Impact**: HIGH severity conflicts would be ignored. Now properly detected.
 
-### 3. MEDIUM: ralph.sh:194 - wait -n Compatibility
+### 3. MEDIUM: raffaello.sh:194 - wait -n Compatibility
 **Issue**: `wait -n` not supported in Bash 3.2
 ```bash
 # After (FIXED)
@@ -76,7 +76,7 @@ task_id=$(echo "$task_output" | grep -oE "ID: [a-f0-9]+" | cut -d' ' -f2 || echo
 **Created**: `lib/logging.sh`
 
 Eliminates 60+ lines of duplicated code across 3 scripts:
-- ralph.sh: Removed 20 lines
+- raffaello.sh: Removed 20 lines
 - orchestrator.sh: Removed 20 lines
 - merge-stories.sh: Removed 20 lines
 
@@ -113,7 +113,7 @@ if [[ $conflict_ratio -gt $CONFLICT_RATIO_HIGH_THRESHOLD ]]; then
 **Enhanced**: Story lookup functions
 
 ```bash
-# Added to ralph.sh and orchestrator.sh
+# Added to raffaello.sh and orchestrator.sh
 get_story_title() {
   local title
   title=$(get_story "$story_id" | jq -r '.title')
@@ -154,7 +154,7 @@ Validates:
 - Prevents wasted time on invalid PRDs
 
 ### 5. Idempotency Checks
-**Enhanced**: `ralph.sh` execute_story()
+**Enhanced**: `raffaello.sh` execute_story()
 
 ```bash
 # Check if branch already exists
@@ -173,7 +173,7 @@ fi
 ```
 
 **Benefits**:
-- Safe to re-run ralph.sh
+- Safe to re-run raffaello.sh
 - Better error handling
 - Clearer intent
 
@@ -222,7 +222,7 @@ echo "$ALL_STORIES_DATA" | jq -r 'select(.passes == false) | .id'
 2. **lib/prd-validator.sh** - NEW (203 lines)
    - Comprehensive PRD validation
 
-3. **ralph.sh** (28 changes)
+3. **raffaello.sh** (28 changes)
    - Fixed associative array bug
    - Added trap cleanup
    - Added PRD validation
@@ -257,7 +257,7 @@ echo "$ALL_STORIES_DATA" | jq -r 'select(.passes == false) | .id'
 4. **Clarity**: Better error messages
 5. **Maintainability**: 60+ lines of code deduplication
 6. **Validation**: Catches PRD errors before execution
-7. **Idempotency**: Safe to re-run ralph.sh
+7. **Idempotency**: Safe to re-run raffaello.sh
 
 ## 🧪 Testing Recommendations
 
@@ -265,7 +265,7 @@ Run these tests to verify all fixes:
 
 ```bash
 # 1. Test on macOS (Bash 3.2)
-./ralph.sh
+./raffaello.sh
 
 # 2. Test PRD validation
 ./lib/prd-validator.sh prd.json
@@ -280,8 +280,8 @@ export CONFLICT_RATIO_HIGH_THRESHOLD=10
 ./lib/conflict-analyzer.sh analyze
 
 # 5. Test idempotency
-./ralph.sh  # Run twice in a row
-./ralph.sh  # Should handle existing branches
+./raffaello.sh  # Run twice in a row
+./raffaello.sh  # Should handle existing branches
 
 # 6. Test dependency caching
 time ./lib/dependency-analyzer.sh prd.json  # Should be faster

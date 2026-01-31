@@ -1,8 +1,8 @@
-# Ralph Parallel - Architecture Deep Dive
+# Raffaello - Architecture Deep Dive
 
 > **English** | [中文](#中文版本)
 
-This document provides a deep technical dive into Ralph Parallel's architecture, design decisions, and implementation details.
+This document provides a deep technical dive into Raffaello's architecture, design decisions, and implementation details.
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@ This document provides a deep technical dive into Ralph Parallel's architecture,
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      ralph.sh                               │
+│                      raffaello.sh                               │
 │  • Read PRD                                                 │
 │  • Analyze dependencies (DAG)                               │
 │  • Group into batches                                       │
@@ -87,7 +87,7 @@ This document provides a deep technical dive into Ralph Parallel's architecture,
 
 ## Core Components
 
-### 1. ralph.sh - Main Orchestrator
+### 1. raffaello.sh - Main Orchestrator
 
 **Responsibilities**:
 - Parse PRD file
@@ -183,7 +183,7 @@ execute_workflow() {
 
 **Communication Directory**:
 ```
-/tmp/ralph-parallel/
+/tmp/raffaello/
 ├── US001/
 │   ├── plan.md                  # Planner → Coder
 │   ├── review-feedback.md       # Reviewer → Coder
@@ -198,6 +198,38 @@ execute_workflow() {
     ├── conflict-escalation.md  # High-severity conflicts
     └── .conflict-resolver-success
 ```
+
+**Baseline Contract System**:
+
+The orchestrator injects baseline environment information into agent prompts to prevent dependency conflicts:
+
+1. **Baseline Story (STORY-001)**: Sets up project scaffold and toolchain
+2. **Non-baseline Stories**: Receive environment snapshot showing existing dependencies
+3. **Contract File**: `workflows/BASELINE_CONTRACT.md` defines rules
+
+```bash
+get_baseline_environment_snapshot() {
+  # Only for non-baseline stories
+  if [[ "$STORY_ID" == "STORY-001" ]]; then return; fi
+
+  # Detect project type and inject dependencies
+  if [[ -f "$repo_root/package.json" ]]; then
+    jq '{dependencies, devDependencies}' "$repo_root/package.json"
+  fi
+  # Also supports: requirements.txt, pyproject.toml, go.mod, Cargo.toml
+}
+```
+
+**Artifact-Based Success Detection**:
+
+Instead of relying solely on success marker files, the orchestrator checks for phase-specific artifacts:
+
+| Phase | Artifact File |
+|-------|---------------|
+| planner | `plan.md` |
+| coder | `implementation-summary.md` |
+| reviewer | `review-changes.md` or `review-approved.md` |
+| tester | `e2e-report.md` or `test-results.json` |
 
 ### 3. dependency-analyzer.sh - DAG Builder
 
@@ -380,7 +412,7 @@ merge_branch() {
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. ralph.sh starts                                          │
+│ 1. raffaello.sh starts                                          │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
@@ -491,7 +523,7 @@ merge_branch() {
 
 ### File-Based IPC
 
-Agents communicate via files in `$AGENT_COMM_DIR` (default: `/tmp/ralph-parallel/`):
+Agents communicate via files in `$AGENT_COMM_DIR` (default: `/tmp/raffaello/`):
 
 **Planner → Coder**:
 ```bash
@@ -859,9 +891,9 @@ EOF
 
 # 中文版本
 
-> [English](#ralph-parallel---architecture-deep-dive) | **中文**
+> [English](#raffaello---architecture-deep-dive) | **中文**
 
-本文档提供 Ralph Parallel 架构、设计决策和实现细节的深度技术解析。
+本文档提供 Raffaello 架构、设计决策和实现细节的深度技术解析。
 
 ## 目录
 
@@ -930,4 +962,4 @@ phases:
 
 ---
 
-**Ralph Parallel** - 架构深度解析
+**Raffaello** - 架构深度解析

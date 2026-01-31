@@ -4,7 +4,7 @@
 
 # Raffaello 🐢
 
-**The Parallel Execution Master** - Ralph's cooler, faster twin brother
+**The Parallel Execution Master** - the evolution of Ralph
 
 *Named after Raphael, the red-masked Ninja Turtle known for his speed and parallel sai strikes*
 
@@ -37,18 +37,18 @@ brew install jq yq  # JSON and YAML parsing
 cp prd.json.example prd.json
 # Edit prd.json with your user stories
 
-# 4. Run Ralph Parallel
-./ralph.sh
+# 4. Run Raffaello
+./raffaello.sh
 ```
 
 If you prefer a one-command wrapper (auto monitor + safer defaults):
 
 ```bash
-/path/to/Raffaello/bin/ralph-start.sh --project-dir /path/to/your/project
+/path/to/Raffaello/bin/raffaello-start.sh --project-dir /path/to/your/project
 ```
 
 See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
-See [docs/RALPH-RUNBOOK.md](docs/RALPH-RUNBOOK.md) for a step-by-step start → monitor → merge → finish guide.
+See [docs/RAFFAELLO-RUNBOOK.md](docs/RAFFAELLO-RUNBOOK.md) for a step-by-step start → monitor → merge → finish guide.
 
 ## Usage Instructions
 
@@ -67,12 +67,12 @@ cp /path/to/prd.json .
 # OR generate using your PRD generator
 
 # 3. Run Raffaello
-/path/to/ralph-parallel/ralph.sh
+/path/to/raffaello/raffaello.sh
 ```
 
 **Important**: Raffaello will look for:
 - `prd.json` in current directory (priority)
-- `prd.json` in ralph-parallel directory (fallback)
+- `prd.json` in raffaello directory (fallback)
 - `workflows/` directory for workflow definitions
 
 ### PRD Field Compatibility
@@ -88,7 +88,7 @@ Each story requires a `workflow` field. If not specified, defaults to `standard`
 **Ensure workflows exist**:
 ```bash
 # Copy workflows to your project directory
-cp -r /path/to/ralph-parallel/workflows .
+cp -r /path/to/raffaello/workflows .
 ```
 
 Available workflows:
@@ -110,7 +110,7 @@ git commit -m "Initial commit"
 
 Raffaello will offer to initialize git automatically if not found, with safety checks to prevent accidents.
 
-## Why Ralph Parallel?
+## Why Raffaello?
 
 ### Original Ralph (Sequential)
 ```
@@ -120,21 +120,21 @@ Iteration 3: Agent → Story 3 → passes:true (30 min)
 Total Time: 90 minutes
 ```
 
-### Ralph Parallel (Parallel)
+### Raffaello (Parallel)
 ```
            ┌→ Agent A → Story 1 → passes:true ┐
-ralph.sh ──┼→ Agent B → Story 2 → passes:true ├→ Auto-merge
+raffaello.sh ──┼→ Agent B → Story 2 → passes:true ├→ Auto-merge
            └→ Agent C → Story 3 → passes:true ┘
 Total Time: 30 minutes (3x faster!)
 ```
 
 ## Architecture Overview
 
-Ralph Parallel uses a **three-level hierarchy** for execution:
+Raffaello uses a **three-level hierarchy** for execution:
 
-### Level 1: Batch-Level Parallelism (ralph.sh)
+### Level 1: Batch-Level Parallelism (raffaello.sh)
 ```
-ralph.sh analyzes dependencies and creates batches:
+raffaello.sh analyzes dependencies and creates batches:
 
 Batch 1 (parallel): Story US001, US002, US003  ← No dependencies
 Batch 2 (parallel): Story US004, US005         ← Depend on US001
@@ -176,7 +176,7 @@ Phase: coder
 ```
 Time ──────────────────────────────────────────────────>
 
-ralph.sh starts Batch 1:
+raffaello.sh starts Batch 1:
   │
   ├─ Story US001 (orchestrator.sh US001)
   │   ├─ planner ──> coder ──> reviewer ──> tester ──> ✅
@@ -219,6 +219,13 @@ Three built-in workflows + custom workflow support:
 - **simple** - Fast (coder + tester only)
 - **standard** - Balanced (all 4 agents)
 - **full-stack** - Complete (includes optional specialists)
+
+### 🛡️ Baseline Contract System
+Prevents dependency conflicts between parallel stories:
+- **STORY-001** (baseline) sets up project scaffold and toolchain
+- Other stories automatically receive baseline environment snapshot
+- Agents are instructed to use existing dependencies
+- `workflows/BASELINE_CONTRACT.md` defines rules for non-baseline stories
 
 ### 🔧 CLI Requirements
 Requires:
@@ -270,8 +277,8 @@ Type 'yes' to proceed, anything else to abort:
 ## Project Structure
 
 ```
-ralph-parallel/
-├── ralph.sh                 # Main parallel execution engine
+raffaello/
+├── raffaello.sh                 # Main parallel execution engine
 ├── orchestrator.sh          # Single-story phase management
 ├── merge-stories.sh         # Smart git merge system
 ├── prd.json                 # Your PRD file
@@ -334,12 +341,12 @@ ralph-parallel/
 - **description** - Detailed requirements
 - **workflow** - Which workflow to use (simple/standard/full-stack)
 - **dependencies** - Array of story IDs this depends on
-- **passes** - Set to false initially, Ralph sets to true when complete
+- **passes** - Set to false initially, Raffaello sets to true when complete
 
 ## How It Works
 
 ### 1. Dependency Analysis
-Ralph analyzes your PRD and builds a dependency graph:
+Raffaello analyzes your PRD and builds a dependency graph:
 ```bash
 ./lib/dependency-analyzer.sh prd.json
 ```
@@ -347,7 +354,7 @@ Ralph analyzes your PRD and builds a dependency graph:
 Stories are grouped into batches where each batch contains independent stories.
 
 ### 2. Parallel Execution
-Ralph executes batches sequentially, stories within batch in parallel:
+Raffaello executes batches sequentially, stories within batch in parallel:
 ```bash
 Batch 1: US001, US002, US003 (parallel)
 Batch 2: US004, US005 (parallel, depend on US001)
@@ -365,7 +372,7 @@ Story US001:
 ```
 
 ### 4. Smart Merging
-After all stories in a batch complete, Ralph merges them:
+After all stories in a batch complete, Raffaello merges them:
 ```bash
 ./merge-stories.sh
 # Automatically handles conflicts using 3-tier strategy
@@ -516,7 +523,7 @@ See [WORKFLOWS.md](docs/WORKFLOWS.md) for custom workflow creation.
 
 ## Conflict Resolution
 
-Ralph uses a three-tier strategy:
+Raffaello uses a three-tier strategy:
 
 ### Tier 1: Auto-Merge (LOW Severity)
 Automatically resolves:
@@ -537,7 +544,7 @@ Requires human intervention:
 - Large conflicts (>20% of file)
 - Complex business logic
 
-Ralph will pause and provide a detailed conflict report for manual resolution.
+Raffaello will pause and provide a detailed conflict report for manual resolution.
 
 ## Configuration
 
@@ -547,8 +554,8 @@ Ralph will pause and provide a detailed conflict report for manual resolution.
 # Maximum parallel stories (default: 3)
 export MAX_PARALLEL_STORIES=3
 
-# Communication directory (default: /tmp/ralph-parallel)
-export AGENT_COMM_DIR=/tmp/ralph-parallel
+# Communication directory (default: /tmp/raffaello)
+export AGENT_COMM_DIR=/tmp/raffaello
 
 # Main branch name (default: main)
 export MAIN_BRANCH=main
@@ -556,7 +563,7 @@ export MAIN_BRANCH=main
 
 ### CLI Detection
 
-Ralph requires Claude Code CLI:
+Raffaello requires Claude Code CLI:
 ```bash
 # Claude Code
 claude --version
@@ -567,7 +574,7 @@ claude --version
 
 ### Main Commands
 ```bash
-./ralph.sh                    # Run parallel execution
+./raffaello.sh                    # Run parallel execution
 ./merge-stories.sh            # Merge story branches
 ```
 
@@ -591,7 +598,7 @@ claude --version
 
 ## Comparison with Original Ralph
 
-| Feature | Original Ralph | Ralph Parallel |
+| Feature | Original Ralph | Raffaello |
 |---------|---------------|----------------|
 | Execution Mode | Sequential | Parallel |
 | Agent Count | 1 (reused) | N (simultaneous) |
@@ -645,7 +652,7 @@ brew install bash
 
 **Impact**: All stories complete successfully and are committed to their branches. Only the automatic merge to main fails.
 
-**Cause**: If you're currently on a story branch (e.g., `story-US001`) when ralph.sh finishes, the auto-merge script cannot switch to `main`.
+**Cause**: If you're currently on a story branch (e.g., `story-US001`) when raffaello.sh finishes, the auto-merge script cannot switch to `main`.
 
 **Solution**: Manually merge the story branches:
 ```bash
@@ -660,7 +667,7 @@ git merge story-US003
 git branch -d story-US001 story-US002 story-US003
 ```
 
-**Prevention**: Ensure you're on `main` branch before running `./ralph.sh`
+**Prevention**: Ensure you're on `main` branch before running `./raffaello.sh`
 
 ## Limitations
 
@@ -678,23 +685,23 @@ git branch -d story-US001 story-US002 story-US003
 
 ## Troubleshooting & Debugging
 
-### Avoid Committing `.ralph-worktrees/`
+### Avoid Committing `.raffaello-worktrees/`
 
-`.ralph-worktrees/` contains git worktrees and build artifacts, and should not be committed.
+`.raffaello-worktrees/` contains git worktrees and build artifacts, and should not be committed.
 
-You only need to run `git rm -r --cached .ralph-worktrees` if you already accidentally committed it (one-time fix).
+You only need to run `git rm -r --cached .raffaello-worktrees` if you already accidentally committed it (one-time fix).
 
 ```bash
 # Remove from index if accidentally committed
-git rm -r --cached .ralph-worktrees || true
+git rm -r --cached .raffaello-worktrees || true
 
 # Ensure it is ignored
-echo '.ralph-worktrees/' >> .gitignore
+echo '.raffaello-worktrees/' >> .gitignore
 ```
 
 ### Understanding the Log Output
 
-Ralph Parallel produces color-coded logs with different prefixes:
+Raffaello produces color-coded logs with different prefixes:
 
 ```bash
 [INFO]         # General information (blue)
@@ -707,13 +714,13 @@ Ralph Parallel produces color-coded logs with different prefixes:
 
 ### Viewing Real-Time Logs
 
-Ralph Parallel outputs logs to stdout in real-time:
+Raffaello outputs logs to stdout in real-time:
 
 ```bash
-./ralph.sh
+./raffaello.sh
 
 # Output:
-[INFO] === Ralph Parallel - Starting Execution ===
+[INFO] === Raffaello - Starting Execution ===
 [INFO] Found 4 incomplete stories
 [INFO] Analyzing dependencies...
 [INFO] Execution plan: 2 batches
@@ -730,23 +737,23 @@ Ralph Parallel outputs logs to stdout in real-time:
 
 ```bash
 # Tail a specific story log
-tail -f .ralph-logs/STORY-001.log
+tail -f .raffaello-logs/STORY-001.log
 
 # Inspect agent communication directory for a story
-ls -la /tmp/ralph-parallel/STORY-001/
+ls -la /tmp/raffaello/STORY-001/
 
 # Tail key phase output
-tail -n 80 /tmp/ralph-parallel/STORY-001/coder-output.txt
+tail -n 80 /tmp/raffaello/STORY-001/coder-output.txt
 
 # Check background agent pid (if present)
-pid=$(cat /tmp/ralph-parallel/STORY-001/coder.pid 2>/dev/null || true)
+pid=$(cat /tmp/raffaello/STORY-001/coder.pid 2>/dev/null || true)
 [[ -n "$pid" ]] && ps -p "$pid" -o pid,ppid,cmd || echo "no pid"
 
 # Watch whether output is still growing (helps spot stalls)
-watch -n 2 'wc -c /tmp/ralph-parallel/STORY-001/*-output.txt 2>/dev/null || true'
+watch -n 2 'wc -c /tmp/raffaello/STORY-001/*-output.txt 2>/dev/null || true'
 
 # If a story looks "instantly passed" but produced no output, clear stale markers from older runs
-rm -rf /tmp/ralph-parallel/STORY-001
+rm -rf /tmp/raffaello/STORY-001
 ```
 
 ### Background Monitor (Optional)
@@ -755,29 +762,29 @@ You can run a lightweight monitor in the background to periodically report story
 
 ```bash
 # Observe-only (recommended)
-nohup /aml/raffaello/raffaello/monitor.sh /aml/test > /aml/test/.ralph-logs/monitor.nohup.log 2>&1 &
-tail -f /aml/test/.ralph-logs/monitor.nohup.log
+nohup /aml/raffaello/raffaello/monitor.sh /aml/test > /aml/test/.raffaello-logs/monitor.nohup.log 2>&1 &
+tail -f /aml/test/.raffaello-logs/monitor.nohup.log
 
 # Kill-stalled mode (use with care)
 # - Kills an agent PID if: alive=yes, success=no, and output hasn't grown for STALL_SECS
 # - Also writes an abort marker so the orchestrator stops waiting immediately.
 STALL_SECS=300 INTERVAL_SECS=10 \
-  nohup /aml/raffaello/raffaello/monitor-kill.sh /aml/test > /aml/test/.ralph-logs/monitor-kill.nohup.log 2>&1 &
-tail -f /aml/test/.ralph-logs/monitor-kill.nohup.log
+  nohup /aml/raffaello/raffaello/monitor-kill.sh /aml/test > /aml/test/.raffaello-logs/monitor-kill.nohup.log 2>&1 &
+tail -f /aml/test/.raffaello-logs/monitor-kill.nohup.log
 
 # Foreground (prints to terminal)
 STALL_SECS=300 INTERVAL_SECS=10 \
   /aml/raffaello/raffaello/monitor-kill.sh /aml/test
 
-# Quick stop + optional clean (kills ralph + agents)
+# Quick stop + optional clean (kills raffaello + agents)
 /aml/raffaello/raffaello/kill-all.sh --project-dir /aml/test --clean
 
-# Auto-enable kill-stalled monitor when running ralph.sh (use with care)
+# Auto-enable kill-stalled monitor when running raffaello.sh (use with care)
 AUTO_MONITOR_KILL=true MONITOR_STALL_SECS=300 MONITOR_INTERVAL_SECS=10 \
-  /aml/raffaello/ralph.sh
+  /aml/raffaello/raffaello.sh
 
 # Global rerun iterations (re-runs incomplete stories if any failed)
-GLOBAL_MAX_ITERATIONS=2 /aml/raffaello/ralph.sh
+GLOBAL_MAX_ITERATIONS=2 /aml/raffaello/raffaello.sh
 ```
 
 ### Check Story Progress
@@ -786,7 +793,7 @@ Each story writes its output to the agent communication directory:
 
 ```bash
 # List all active stories
-ls -la /tmp/ralph-parallel/
+ls -la /tmp/raffaello/
 
 # Output:
 drwxr-xr-x  US001/
@@ -794,7 +801,7 @@ drwxr-xr-x  US002/
 drwxr-xr-x  US003/
 
 # Check phases completed for a specific story
-ls -la /tmp/ralph-parallel/US001/
+ls -la /tmp/raffaello/US001/
 
 # Output:
 -rw-r--r--  .planner-success   # ✅ Planner completed
@@ -809,10 +816,10 @@ Each agent writes its prompt and output:
 
 ```bash
 # View the prompt sent to an agent
-cat /tmp/ralph-parallel/US001/coder-prompt.txt
+cat /tmp/raffaello/US001/coder-prompt.txt
 
 # View the agent's execution output (if synchronous)
-cat /tmp/ralph-parallel/US001/coder-output.txt
+cat /tmp/raffaello/US001/coder-output.txt
 ```
 
 ### Check Background Agent PID
@@ -821,13 +828,13 @@ Each phase persists its background process PID (when available) to help debuggin
 
 ```bash
 # View the PID for a running phase
-cat /tmp/ralph-parallel/US001/coder.pid
+cat /tmp/raffaello/US001/coder.pid
 
 # Inspect the process
-ps -p "$(cat /tmp/ralph-parallel/US001/coder.pid)" -o pid,ppid,cmd
+ps -p "$(cat /tmp/raffaello/US001/coder.pid)" -o pid,ppid,cmd
 
 # Follow live output
-tail -f /tmp/ralph-parallel/US001/coder-output.txt
+tail -f /tmp/raffaello/US001/coder-output.txt
 ```
 
 ### Check PRD Status
@@ -883,10 +890,10 @@ git diff main...story-US001
 **Debug steps**:
 ```bash
 # 1. Check if success marker exists
-ls /tmp/ralph-parallel/US001/.coder-success
+ls /tmp/raffaello/US001/.coder-success
 
 # 2. If missing, check agent prompt
-cat /tmp/ralph-parallel/US001/coder-prompt.txt
+cat /tmp/raffaello/US001/coder-prompt.txt
 
 # 3. Check if claude task is running
 claude task list
@@ -907,7 +914,7 @@ claude task output <task-id>
 **Debug steps**:
 ```bash
 # 1. Check what the agent tried to do
-cat /tmp/ralph-parallel/US001/coder-output.txt
+cat /tmp/raffaello/US001/coder-output.txt
 
 # 2. Check git commits (agent may have partially completed)
 git log story-US001 --oneline
@@ -916,7 +923,7 @@ git log story-US001 --oneline
 git status story-US001
 
 # 4. Read the agent prompt to understand requirements
-cat /tmp/ralph-parallel/US001/coder-prompt.txt
+cat /tmp/raffaello/US001/coder-prompt.txt
 ```
 
 **Common causes**:
@@ -981,10 +988,10 @@ jq '.userStories[] | {id: .id, deps: .dependencies}' prd.json
 ### Stories Stuck in Progress
 ```bash
 # Check agent communication directory
-ls -la /tmp/ralph-parallel/
+ls -la /tmp/raffaello/
 
 # Check for success markers
-ls -la /tmp/ralph-parallel/US001/.coder-success
+ls -la /tmp/raffaello/US001/.coder-success
 ```
 
 ### Merge Conflicts
@@ -1055,8 +1062,8 @@ Inspired by:
 
 ## Support
 
-- GitHub Issues: [Report bugs](https://github.com/yourusername/ralph-parallel/issues)
-- Discussions: [Ask questions](https://github.com/yourusername/ralph-parallel/discussions)
+- GitHub Issues: [Report bugs](https://github.com/yourusername/raffaello/issues)
+- Discussions: [Ask questions](https://github.com/yourusername/raffaello/discussions)
 - Documentation: [Read the docs](docs/)
 
 ---
@@ -1069,7 +1076,7 @@ Inspired by:
 
 # Raffaello 🐢
 
-**并行执行大师** - Ralph 更酷、更快的双胞胎兄弟
+**并行执行大师** - Ralph 的进化版
 
 *以忍者神龟中戴红色面罩的拉斐尔命名，以速度和双叉攻击闻名*
 
@@ -1099,13 +1106,13 @@ brew install jq yq  # JSON 和 YAML 解析
 cp prd.json.example prd.json
 # 编辑 prd.json 添加你的用户故事
 
-# 4. 运行 Ralph Parallel
-./ralph.sh
+# 4. 运行 Raffaello
+./raffaello.sh
 ```
 
 查看 [QUICKSTART.md](QUICKSTART.md) 获取详细设置说明。
 
-## 为什么选择 Ralph Parallel？
+## 为什么选择 Raffaello？
 
 ### 原始 Ralph（串行）
 ```
@@ -1115,21 +1122,21 @@ cp prd.json.example prd.json
 总时间: 90 分钟
 ```
 
-### Ralph Parallel（并行）
+### Raffaello（并行）
 ```
            ┌→ 代理 A → 故事 1 → passes:true ┐
-ralph.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
+raffaello.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
            └→ 代理 C → 故事 3 → passes:true ┘
 总时间: 30 分钟 (快 3 倍!)
 ```
 
 ## 架构概览
 
-Ralph Parallel 使用**三层执行架构**：
+Raffaello 使用**三层执行架构**：
 
-### 第 1 层：Batch 级别的并行（ralph.sh）
+### 第 1 层：Batch 级别的并行（raffaello.sh）
 ```
-ralph.sh 分析依赖关系并创建批次：
+raffaello.sh 分析依赖关系并创建批次：
 
 Batch 1 (并行): Story US001, US002, US003  ← 无依赖
 Batch 2 (并行): Story US004, US005         ← 依赖 US001
@@ -1171,7 +1178,7 @@ Phase: coder
 ```
 时间 ──────────────────────────────────────────────────>
 
-ralph.sh 启动 Batch 1:
+raffaello.sh 启动 Batch 1:
   │
   ├─ Story US001 (orchestrator.sh US001)
   │   ├─ planner ──> coder ──> reviewer ──> tester ──> ✅
@@ -1189,8 +1196,8 @@ ralph.sh 启动 Batch 1:
 ## 项目结构
 
 ```
-ralph-parallel/
-├── ralph.sh                 # 主并行执行引擎
+raffaello/
+├── raffaello.sh                 # 主并行执行引擎
 ├── orchestrator.sh          # 单个 story 的 phase 管理
 ├── merge-stories.sh         # 智能 git 合并系统
 ├── prd.json                 # 你的 PRD 文件
@@ -1253,12 +1260,12 @@ ralph-parallel/
 - **description** - 详细需求
 - **workflow** - 使用哪个工作流（simple/standard/full-stack）
 - **dependencies** - 此 story 依赖的 story ID 数组
-- **passes** - 初始设置为 false，Ralph 完成后设置为 true
+- **passes** - 初始设置为 false，Raffaello 完成后设置为 true
 
 ## 工作原理
 
 ### 1. 依赖分析
-Ralph 分析你的 PRD 并构建依赖图：
+Raffaello 分析你的 PRD 并构建依赖图：
 ```bash
 ./lib/dependency-analyzer.sh prd.json
 ```
@@ -1266,7 +1273,7 @@ Ralph 分析你的 PRD 并构建依赖图：
 Stories 被分组到批次中，每个批次包含独立的 stories。
 
 ### 2. 并行执行
-Ralph 顺序执行批次，批次内的 stories 并行执行：
+Raffaello 顺序执行批次，批次内的 stories 并行执行：
 ```bash
 Batch 1: US001, US002, US003（并行）
 Batch 2: US004, US005（并行，依赖 US001）
@@ -1284,7 +1291,7 @@ Story US001:
 ```
 
 ### 4. 智能合并
-每个 story 完成后，Ralph 将 story 分支合并到 main：
+每个 story 完成后，Raffaello 将 story 分支合并到 main：
 - 分析冲突严重性
 - 自动合并 LOW 严重性冲突
 - 为 MEDIUM 严重性冲突调用 AI 解决器
@@ -1525,8 +1532,8 @@ function validatePassword(pwd) { ... }
 # 最大并行 stories（默认：3）
 export MAX_PARALLEL_STORIES=3
 
-# Agent 通信目录（默认：/tmp/ralph-parallel）
-export AGENT_COMM_DIR="/tmp/ralph-parallel"
+# Agent 通信目录（默认：/tmp/raffaello）
+export AGENT_COMM_DIR="/tmp/raffaello"
 
 # 工作流目录（默认：./workflows）
 export WORKFLOW_DIR="./workflows"
@@ -1549,8 +1556,8 @@ export WORKFLOW_DIR="./workflows"
 ### 主要命令
 
 ```bash
-# 运行 Ralph Parallel（执行所有未完成的 stories）
-./ralph.sh
+# 运行 Raffaello（执行所有未完成的 stories）
+./raffaello.sh
 
 # 运行特定 story
 ./orchestrator.sh US001
@@ -1575,7 +1582,7 @@ ls workflows/*.yaml
 yq eval workflows/standard.yaml
 
 # 清理临时文件
-rm -rf /tmp/ralph-parallel/*
+rm -rf /tmp/raffaello/*
 
 # 查看所有 story 分支
 git branch | grep story-
@@ -1583,7 +1590,7 @@ git branch | grep story-
 
 ## 与原始 Ralph 对比
 
-| 功能 | 原始 Ralph | Ralph Parallel |
+| 功能 | 原始 Ralph | Raffaello |
 |------|------------|----------------|
 | 执行模式 | 串行（一次一个 story） | 并行（同时最多 3 个 stories） |
 | 执行时间 | N × 时间/story | 时间/story（如果独立） |
@@ -1634,7 +1641,7 @@ brew install bash
 
 **影响**：所有 stories 成功完成并提交到各自分支。只有自动合并到 main 失败。
 
-**原因**：如果 ralph.sh 结束时你在 story 分支（如 `story-US001`），自动合并脚本无法切换到 `main`。
+**原因**：如果 raffaello.sh 结束时你在 story 分支（如 `story-US001`），自动合并脚本无法切换到 `main`。
 
 **解决方法**：手动合并 story 分支：
 ```bash
@@ -1649,7 +1656,7 @@ git merge story-US003
 git branch -d story-US001 story-US002 story-US003
 ```
 
-**预防**：运行 `./ralph.sh` 前确保在 `main` 分支
+**预防**：运行 `./raffaello.sh` 前确保在 `main` 分支
 
 ## 限制
 
@@ -1669,7 +1676,7 @@ git branch -d story-US001 story-US002 story-US003
 
 ### 理解日志输出
 
-Ralph Parallel 产生带颜色前缀的日志：
+Raffaello 产生带颜色前缀的日志：
 
 ```bash
 [INFO]         # 一般信息（蓝色）
@@ -1682,13 +1689,13 @@ Ralph Parallel 产生带颜色前缀的日志：
 
 ### 查看实时日志
 
-Ralph Parallel 实时输出日志到 stdout：
+Raffaello 实时输出日志到 stdout：
 
 ```bash
-./ralph.sh
+./raffaello.sh
 
 # 输出：
-[INFO] === Ralph Parallel - 开始执行 ===
+[INFO] === Raffaello - 开始执行 ===
 [INFO] 找到 4 个未完成的 stories
 [INFO] 分析依赖关系...
 [INFO] 执行计划：2 个批次
@@ -1706,7 +1713,7 @@ Ralph Parallel 实时输出日志到 stdout：
 
 ```bash
 # 列出所有活动的 stories
-ls -la /tmp/ralph-parallel/
+ls -la /tmp/raffaello/
 
 # 输出：
 drwxr-xr-x  US001/
@@ -1714,7 +1721,7 @@ drwxr-xr-x  US002/
 drwxr-xr-x  US003/
 
 # 检查特定 story 完成的 phases
-ls -la /tmp/ralph-parallel/US001/
+ls -la /tmp/raffaello/US001/
 
 # 输出：
 -rw-r--r--  .planner-success   # ✅ Planner 完成
@@ -1807,10 +1814,10 @@ MIT License - 查看 [LICENSE](LICENSE) 了解详情
 
 ## 支持
 
-- GitHub Issues: [报告 bug](https://github.com/yourusername/ralph-parallel/issues)
-- Discussions: [提问](https://github.com/yourusername/ralph-parallel/discussions)
+- GitHub Issues: [报告 bug](https://github.com/yourusername/raffaello/issues)
+- Discussions: [提问](https://github.com/yourusername/raffaello/discussions)
 - 文档: [阅读文档](docs/)
 
 ---
 
-**Ralph Parallel** - 自主代理，并行执行 🚀
+**Raffaello** - 自主代理，并行执行 🚀

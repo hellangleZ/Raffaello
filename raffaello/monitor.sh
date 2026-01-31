@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ralph monitor - periodically reports progress and detects stalled agents.
+# Raffaello monitor - periodically reports progress and detects stalled agents.
 
 set -euo pipefail
 
@@ -22,11 +22,11 @@ SHOW_INACTIVE=${SHOW_INACTIVE:-true}
 # Safety: default is observe-only. Set KILL_STALLED=true to enable killing.
 KILL_STALLED=${KILL_STALLED:-false}
 
-LOG_DIR="$TARGET_DIR/.ralph-logs"
+LOG_DIR="$TARGET_DIR/.raffaello-logs"
 mkdir -p "$LOG_DIR"
 OUT_LOG="${OUT_LOG:-$LOG_DIR/monitor.log}"
 
-COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+COMM_DIR="${AGENT_COMM_DIR:-/tmp/raffaello}"
 
 now() { date -Is; }
 

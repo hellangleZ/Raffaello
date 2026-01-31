@@ -18,7 +18,7 @@ source "$SCRIPT_DIR/lib/logging.sh"
 
 # Configuration
 MAIN_BRANCH=${MAIN_BRANCH:-main}
-COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel}/merge"
+COMM_DIR="${AGENT_COMM_DIR:-/tmp/raffaello}/merge"
 
 # Create communication directory
 mkdir -p "$COMM_DIR"

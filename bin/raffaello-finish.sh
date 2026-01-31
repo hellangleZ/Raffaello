@@ -8,10 +8,10 @@ PROJECT_DIR="$(pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  ./ralph-finish.sh [--merge-pass] [--clean] [--dry-run]
+  ./raffaello-finish.sh [--merge-pass] [--clean] [--dry-run]
 
 What it does (in order):
-  1) Stops ralph/agents/monitors for this project (kill-all)
+  1) Stops raffaello/agents/monitors for this project (kill-all)
   2) Cleans comm/worktrees (optional)
   3) Ensures working tree is clean
   4) Merges passes=true story branches into the current branch (optional)
@@ -23,8 +23,8 @@ Options:
   --dry-run      Print actions, do not execute destructive steps
 
 Examples:
-  ./ralph-finish.sh --project-dir /path/to/project --merge-pass
-  ./ralph-finish.sh --project-dir /path/to/project --clean --merge-pass
+  ./raffaello-finish.sh --project-dir /path/to/project --merge-pass
+  ./raffaello-finish.sh --project-dir /path/to/project --clean --merge-pass
 EOF
 }
 
@@ -55,17 +55,17 @@ run() {
 }
 
 kill_orphan_claude() {
-  # Only kill `claude` processes that are clearly orphaned from Ralph:
+  # Only kill `claude` processes that are clearly orphaned from Raffaello:
   # - command is exactly "claude"
   # - PPID == 1
-  # - PID is not referenced by any /tmp/ralph-parallel/STORY-*/<phase>.pid file
-  local comm_dir="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+  # - PID is not referenced by any /tmp/raffaello-parallel/STORY-*/<phase>.pid file
+  local comm_dir="${AGENT_COMM_DIR:-/tmp/raffaello-parallel}"
 
   if [[ ! -d "$comm_dir" ]]; then
     return 0
   fi
 
-  # Build a set of PIDs that Ralph still considers relevant.
+  # Build a set of PIDs that Raffaello still considers relevant.
   # Those MUST NOT be killed.
   local referenced_pids
   referenced_pids=$(ls "$comm_dir"/STORY-*/{planner,coder,reviewer,tester}.pid 2>/dev/null \
@@ -86,7 +86,7 @@ kill_orphan_claude() {
       continue
     fi
 
-    echo "[ralph-finish] killing orphan claude pid=$pid"
+    echo "[raffaello-finish] killing orphan claude pid=$pid"
     if [[ "$DRY_RUN" == "true" ]]; then
       continue
     fi
@@ -96,18 +96,18 @@ kill_orphan_claude() {
     kill -KILL "$pid" 2>/dev/null || true
     sleep 0.2
     if kill -0 "$pid" 2>/dev/null; then
-      echo "[ralph-finish] WARN: orphan claude still alive pid=$pid" >&2
+      echo "[raffaello-finish] WARN: orphan claude still alive pid=$pid" >&2
     fi
     killed=$((killed+1))
   done < <(pgrep -x claude 2>/dev/null || true)
 
   if [[ $killed -gt 0 ]]; then
-    echo "[ralph-finish] orphan claude killed=$killed"
+    echo "[raffaello-finish] orphan claude killed=$killed"
   fi
 }
 
 
-echo "[ralph-finish] project=$PROJECT_DIR"
+echo "[raffaello-finish] project=$PROJECT_DIR"
 
 KILL_ALL="/aml/raffaello/raffaello/kill-all.sh"
 if [[ ! -x "$KILL_ALL" ]]; then
@@ -120,7 +120,7 @@ if [[ "$CLEAN" == "true" ]]; then
   kill_args+=("--clean-comm" "--clean-worktrees")
 fi
 
-echo "[ralph-finish] stopping agents/monitors..."
+echo "[raffaello-finish] stopping agents/monitors..."
 run "bash '$KILL_ALL' ${kill_args[*]}"
 
 # Optional: clean up orphaned Claude processes left behind after success
@@ -131,7 +131,7 @@ fi
 
 
 
-echo "[ralph-finish] ensuring repo hygiene..."
+echo "[raffaello-finish] ensuring repo hygiene..."
 run "rm -f '$PROJECT_DIR/prd.json.lock' 2>/dev/null || true"
 run "git checkout -q master || true"
 run "git worktree prune || true"
@@ -144,13 +144,13 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 if [[ "$MERGE_PASS" == "true" ]]; then
-  if [[ ! -x "$PROJECT_DIR/ralph-merge.sh" ]]; then
-    echo "ERROR: missing $PROJECT_DIR/ralph-merge.sh" >&2
+  if [[ ! -x "$PROJECT_DIR/raffaello-merge.sh" ]]; then
+    echo "ERROR: missing $PROJECT_DIR/raffaello-merge.sh" >&2
     exit 4
   fi
-  echo "[ralph-finish] merging passes=true stories..."
-  run "'$PROJECT_DIR/ralph-merge.sh' merge-pass"
+  echo "[raffaello-finish] merging passes=true stories..."
+  run "'$PROJECT_DIR/raffaello-merge.sh' merge-pass"
 fi
 
-echo "[ralph-finish] done"
+echo "[raffaello-finish] done"
 

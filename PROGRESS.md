@@ -1,9 +1,9 @@
-# Ralph Parallel - Development Progress
+# Raffaello - Development Progress
 
-## Overall Status: Phase 5 Complete (83% done)
+## Overall Status: Complete ✅ (100% done)
 
-**Completed Phases**: 5 / 6
-**Remaining**: Phase 6 (End-to-end testing)
+**All Phases Complete**: 6 / 6
+**E2E Test**: 10/10 stories passed, 250 tests passed
 
 ## Phase 1: Project Skeleton and CLI Adaptation ✅
 
@@ -13,7 +13,7 @@
 ### What Was Implemented
 
 1. **Project Structure**
-   - Created `/Users/chilikevin/aml/ralph-parallel/` with organized directories
+   - Created `/Users/chilikevin/aml/raffaello/` with organized directories
    - `lib/` - Core library functions
    - `agents/` - Agent instruction files
    - `workflows/`, `docs/` - Prepared for future phases
@@ -28,7 +28,7 @@
    - `spawn_agent()` - Consistent interface for both CLIs
    - `wait_for_agents()` - Wait for completion
    - `close_agent()` - Cleanup resources
-   - File-based communication in `/tmp/ralph-parallel/`
+   - File-based communication in `/tmp/raffaello/`
    - Success marker system (`.{agent}-success` files)
 
 4. **Dynamic Agent Loading** (`lib/load-agents.sh`)
@@ -46,7 +46,7 @@
 ### Files Created
 
 ```
-ralph-parallel/
+raffaello/
 ├── README.md                    # Bilingual project documentation
 ├── PROGRESS.md                  # This file
 ├── lib/
@@ -86,7 +86,7 @@ Total Available: 12
 
 ### Learnings for Future Phases
 
-1. **Agent Communication Directory**: Using `/tmp/ralph-parallel/{story_id}/` keeps story-specific data isolated
+1. **Agent Communication Directory**: Using `/tmp/raffaello/{story_id}/` keeps story-specific data isolated
 2. **PID as Agent ID**: For Claude Code, we use process PID as agent identifier
 3. **Optional Agent Discovery**: `find` with `-maxdepth 1` ensures we don't recurse into subdirectories
 4. **Workflow Validation**: Must check agent existence before starting orchestration
@@ -95,7 +95,7 @@ Total Available: 12
 ### Next Phase Requirements
 
 Phase 2 will need:
-1. **ralph.sh** - Main parallel loop
+1. **raffaello.sh** - Main parallel loop
    - Read prd.json
    - Analyze dependencies
    - Spawn orchestrators for each story (max 3 concurrent)
@@ -126,7 +126,7 @@ Estimated: 1.5 hours (within 1-2 hour estimate for Phase 1)
 
 ### What Was Implemented
 
-1. **Main Parallel Loop** (`ralph.sh`)
+1. **Main Parallel Loop** (`raffaello.sh`)
    - Reads PRD and identifies incomplete stories
    - Calls dependency analyzer to create execution plan
    - Executes stories in batches (max 3 concurrent per batch)
@@ -169,8 +169,8 @@ Estimated: 1.5 hours (within 1-2 hour estimate for Phase 1)
 ### Files Created
 
 ```
-ralph-parallel/
-├── ralph.sh                         # Main parallel loop (180 lines)
+raffaello/
+├── raffaello.sh                         # Main parallel loop (180 lines)
 ├── orchestrator.sh                  # Story phase manager (210 lines)
 ├── merge-stories.sh                 # Branch merge manager (150 lines)
 ├── prd.json                         # Test PRD with 3 stories
@@ -223,7 +223,7 @@ ralph-parallel/
 1. **No Conflict Resolution**: merge-stories.sh aborts on conflicts (Phase 4 will add AI resolver)
 2. **No Workflow Parser**: orchestrator.sh uses yq directly (Phase 3 will add dedicated parser)
 3. **Limited Error Recovery**: Failed stories don't automatically retry at orchestrator level
-4. **No Progress Persistence**: If ralph.sh crashes, must restart from beginning
+4. **No Progress Persistence**: If raffaello.sh crashes, must restart from beginning
 
 ### Time Spent
 
@@ -273,7 +273,7 @@ Estimated: 2.5 hours (within 2-3 hour estimate for Phase 2)
 ### Files Created/Modified
 
 ```
-ralph-parallel/
+raffaello/
 ├── lib/
 │   └── workflow-parser.sh          # 310 lines - YAML parser with CLI
 ├── docs/
@@ -424,7 +424,7 @@ Estimated: 1.5 hours (within 1-2 hour estimate for Phase 3)
 ### Files Created/Modified
 
 ```
-ralph-parallel/
+raffaello/
 ├── lib/
 │   └── conflict-analyzer.sh        # 220 lines - Severity analysis
 ├── agents/
@@ -615,7 +615,7 @@ Estimated: 2 hours (within 2-3 hour estimate for Phase 4)
 ### Files Created/Updated
 
 ```
-ralph-parallel/
+raffaello/
 ├── README.md              # Updated (from 284 lines → 547 lines)
 ├── QUICKSTART.md          # Created (400+ lines)
 ├── prd.json.example       # Created (10 stories with dependencies)
@@ -666,7 +666,7 @@ ralph-parallel/
 - ✅ Installation (macOS + Linux)
 - ✅ Dependency verification
 - ✅ First PRD creation
-- ✅ Running Ralph (detailed output)
+- ✅ Running Raffaello (detailed output)
 - ✅ Monitoring progress
 - ✅ Workflow selection guide
 - ✅ Conflict handling tutorial
@@ -836,7 +836,7 @@ Result: ✅ Correct (3 sequential batches)
 ### Files Created
 
 ```
-ralph-parallel/
+raffaello/
 ├── tools/tests/test-e2e.sh          # Automated E2E test suite (invoked via run-tests.sh e2e)
 └── test-project/
     ├── .git/             # Git repository
@@ -873,13 +873,13 @@ ralph-parallel/
 
 ### Manual Testing Notes
 
-To fully test Ralph Parallel execution (requires AI CLI):
+To fully test Raffaello execution (requires AI CLI):
 ```bash
 # 1. Navigate to test project
 cd test-project
 
-# 2. Run Ralph Parallel
-../ralph.sh
+# 2. Run Raffaello
+../raffaello.sh
 
 # Expected behavior:
 # - Batch 1: Execute US001 on branch story-US001
@@ -981,7 +981,7 @@ Estimated: 1 hour (within 1-2 hour estimate for Phase 6)
 
 ### Ready for Production
 
-Ralph Parallel is production-ready:
+Raffaello is production-ready:
 - ✅ All core features implemented
 - ✅ Comprehensive documentation
 - ✅ Automated testing
@@ -992,7 +992,7 @@ Ralph Parallel is production-ready:
 
 1. **Quick Start**: Follow QUICKSTART.md (5 minutes)
 2. **Create PRD**: Use prd.json.example as template
-3. **Run Ralph**: Execute ./ralph.sh
+3. **Run Raffaello**: Execute ./raffaello.sh
 4. **Monitor**: Watch progress in progress.txt
 5. **Verify**: Check git commits and updated PRD
 
@@ -1001,7 +1001,7 @@ Ralph Parallel is production-ready:
 ## 2026-01-25 - Actual Testing & Bug Fixes
 
 ### Testing Phase
-Ran ralph.sh with real test project and discovered/fixed 4 critical bugs:
+Ran raffaello.sh with real test project and discovered/fixed 4 critical bugs:
 
 **Bug Fixes**:
 1. ✅ Fixed `lib/lib/` path duplication (SCRIPT_DIR collision in agent-api.sh)
@@ -1019,7 +1019,7 @@ Ran ralph.sh with real test project and discovered/fixed 4 critical bugs:
 
 **Files Created**:
 - TESTING_RESULTS.md (comprehensive 284-line test report)
-- test-project/ ralph-execution.log (execution logs)
+- test-project/ raffaello-execution.log (execution logs)
 
 **Commits**:
 - `60e6e36`: Fix SCRIPT_DIR collisions and Bash 3.2 compatibility
@@ -1034,5 +1034,98 @@ Ran ralph.sh with real test project and discovered/fixed 4 critical bugs:
 
 ---
 
-**Ralph Parallel** - Multi-agent PRD execution, architecture complete! 🚀
-(Agent integration layer needs completion for Claude Code)
+## 2026-01-31 - Baseline Environment Injection & E2E Testing
+
+### Overview
+
+Completed major enhancements to prevent dependency conflicts and successfully ran a full end-to-end test with a 10-story Gomoku (五子棋) project.
+
+### New Features Implemented
+
+1. **Baseline Contract System** (`workflows/BASELINE_CONTRACT.md`)
+   - Rules for non-baseline stories to follow
+   - Dependency management guidelines
+   - High-conflict file list (package.json, go.mod, etc.)
+   - Automatically injected into agent prompts
+
+2. **Baseline Environment Snapshot** (`orchestrator.sh`)
+   - `get_baseline_environment_snapshot()` function
+   - Auto-detects project type (Node.js, Python, Go, Rust)
+   - Injects existing dependencies into agent prompts
+   - Only for non-baseline stories (skips STORY-001)
+   - Supports: package.json, requirements.txt, pyproject.toml, go.mod, Cargo.toml
+
+3. **Artifact-Based Success Detection** (`lib/agent-api.sh`)
+   - `check_phase_artifacts()` function
+   - Checks for phase-specific output files every 2 seconds:
+     - planner: `plan.md`
+     - coder: `implementation-summary.md`
+     - reviewer: `review-changes.md` or `review-approved.md`
+     - tester: `e2e-report.md` or `test-results.json`
+   - Fixes false idle-timeout failures when Claude CLI doesn't output incrementally
+
+4. **CLI Argument Parsing** (`raffaello.sh`)
+   - `--max-iterations N` - Maximum retry iterations
+   - `--max-parallel N` - Maximum parallel stories
+   - `--auto-kill` - Enable stalled agent auto-kill
+   - `--stall-secs N` - Stall detection threshold
+   - `--yes, -y` - Non-interactive mode
+   - `--help, -h` - Show help
+
+5. **Removed Hardcoded Model** (`lib/agent-api.sh`)
+   - Removed `--model` flag from Claude CLI invocation
+   - Uses `settings.json` default (ANTHROPIC_MODEL)
+   - Better compatibility with proxy configurations
+
+### Bug Fixes
+
+1. **BASELINE_CONTRACT.md path** - Fixed path from `$repo_root/` to `$repo_root/workflows/`
+2. **Idle timeout false positives** - Now checks artifacts before timing out
+3. **Batch iteration counter** - Fixed `((batch_idx++))` to `((batch_idx++)) || true`
+
+### End-to-End Test Results
+
+**Test Project**: Gomoku (五子棋) - 10 user stories
+
+| Story | Title | Status |
+|-------|-------|--------|
+| STORY-001 | Baseline: scaffold and tooling | ✅ PASSED |
+| STORY-002 | Draw board and render pieces | ✅ PASSED |
+| STORY-003 | Place piece interaction and turn switching | ✅ PASSED |
+| STORY-004 | Win detection (five in a row) and game over | ✅ PASSED |
+| STORY-005 | Game controls: restart, undo, move history | ✅ PASSED |
+| STORY-006 | UI polish: status text, current player, highlight | ✅ PASSED |
+| STORY-007 | AI opponent: simple heuristic | ✅ PASSED |
+| STORY-008 | Settings panel: first move, board size, difficulty | ✅ PASSED |
+| STORY-009 | Persistence: last settings and in-progress game | ✅ PASSED |
+| STORY-010 | Automated tests: rule engine and key interactions | ✅ PASSED |
+
+**Final Test Results**:
+- **250 tests passed** (0 failed)
+- **All 10 stories completed successfully**
+- **No dependency conflicts** - All stories used baseline dependencies
+- **Parallel execution working** - 3 stories running concurrently
+
+### Files Changed
+
+```
+modified:   lib/agent-api.sh      # Artifact detection, removed --model
+modified:   orchestrator.sh       # Baseline env injection, contract path fix
+modified:   raffaello.sh              # CLI args, iteration fix
+new:        workflows/BASELINE_CONTRACT.md  # Baseline rules
+```
+
+### Lessons Learned
+
+1. **Claude CLI `-p` mode** doesn't output incrementally - need artifact-based detection
+2. **Baseline story** must be completed before others start (dependency enforcement works)
+3. **Environment snapshot** prevents agents from adding conflicting dependencies
+4. **Idle timeout** of 5 minutes is reasonable, but artifact detection is more reliable
+
+### Overall Status
+
+**100% Complete** - All features implemented and tested end-to-end!
+
+---
+
+**Raffaello** - Multi-agent PRD execution, fully operational! 🚀

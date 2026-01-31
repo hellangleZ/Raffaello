@@ -1,8 +1,8 @@
-# Ralph Parallel - Quick Start Guide
+# Raffaello - Quick Start Guide
 
 > **English** | [中文](#中文版本)
 
-Get Ralph Parallel up and running in 5 minutes!
+Get Raffaello up and running in 5 minutes!
 
 ## Prerequisites
 
@@ -16,8 +16,8 @@ Get Ralph Parallel up and running in 5 minutes!
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/ralph-parallel
-cd ralph-parallel
+git clone https://github.com/yourusername/raffaello
+cd raffaello
 ```
 
 ### Step 2: Install Dependencies
@@ -104,7 +104,7 @@ Create `prd.json`:
 }
 ```
 
-## Running Ralph Parallel
+## Running Raffaello
 
 ### Basic Execution
 
@@ -112,28 +112,28 @@ Create `prd.json`:
 # Analyze dependencies first (optional)
 ./lib/dependency-analyzer.sh prd.json
 
-# Run Ralph Parallel
-./ralph.sh
+# Run Raffaello
+./raffaello.sh
 ```
 
 If you prefer a one-command wrapper (auto monitor + safer defaults):
 
 ```bash
-/path/to/Raffaello/bin/ralph-start.sh --project-dir /path/to/your/project
+/path/to/Raffaello/bin/raffaello-start.sh --project-dir /path/to/your/project
 ```
 
-See `docs/RALPH-RUNBOOK.md` for start → monitor → merge → finish.
+See `docs/RAFFAELLO-RUNBOOK.md` for start → monitor → merge → finish.
 
 You'll see output like:
 ```
-[RALPH] Starting Ralph Parallel execution...
-[RALPH] Found 2 stories to implement
-[RALPH] Analyzing dependencies...
-[RALPH] Created 2 batches:
-[RALPH]   Batch 1: US001
-[RALPH]   Batch 2: US002 (depends on US001)
+[RAFFAELLO] Starting Raffaello execution...
+[RAFFAELLO] Found 2 stories to implement
+[RAFFAELLO] Analyzing dependencies...
+[RAFFAELLO] Created 2 batches:
+[RAFFAELLO]   Batch 1: US001
+[RAFFAELLO]   Batch 2: US002 (depends on US001)
 
-[RALPH] Executing Batch 1 (1 stories in parallel)...
+[RAFFAELLO] Executing Batch 1 (1 stories in parallel)...
 [STORY] Executing story US001: Add task creation
 [STORY]   Using workflow: simple
 [ORCH] Phase 1: coder
@@ -142,7 +142,7 @@ You'll see output like:
   ... (agent working) ...
 [STORY] ✓ Story US001 complete
 
-[RALPH] Executing Batch 2 (1 stories in parallel)...
+[RAFFAELLO] Executing Batch 2 (1 stories in parallel)...
 [STORY] Executing story US002: Add task deletion
   ... (same flow) ...
 [STORY] ✓ Story US002 complete
@@ -151,18 +151,18 @@ You'll see output like:
 [MERGE] ✓ story-US001 merged (fast-forward)
 [MERGE] ✓ story-US002 merged (fast-forward)
 
-[RALPH] === All Stories Complete! ===
+[RAFFAELLO] === All Stories Complete! ===
 ```
 
 ### Monitor Progress
 
-While Ralph is running, you can monitor in another terminal:
+While Raffaello is running, you can monitor in another terminal:
 ```bash
 # Watch progress log
 tail -f progress.txt
 
 # Check agent communication
-ls -la /tmp/ralph-parallel/
+ls -la /tmp/raffaello/
 
 # Check git branches
 git branch
@@ -177,7 +177,7 @@ jq '.userStories[] | {id, passes}' prd.json
 
 ## Understanding Workflows
 
-Ralph Parallel has 3 built-in workflows:
+Raffaello has 3 built-in workflows:
 
 ### Simple Workflow (Fastest)
 ```yaml
@@ -225,7 +225,7 @@ To use a specific workflow, set it in your PRD:
 
 ## Handling Conflicts
 
-If merge conflicts occur, Ralph will:
+If merge conflicts occur, Raffaello will:
 
 1. **Analyze severity** (LOW/MEDIUM/HIGH)
 2. **Auto-merge** if LOW severity
@@ -234,7 +234,7 @@ If merge conflicts occur, Ralph will:
 
 ### Manual Conflict Resolution
 
-If Ralph can't auto-resolve:
+If Raffaello can't auto-resolve:
 ```bash
 # View conflict analysis
 ./lib/conflict-analyzer.sh analyze
@@ -266,7 +266,7 @@ Create `.env` file (optional):
 MAX_PARALLEL_STORIES=3
 
 # Communication directory
-AGENT_COMM_DIR=/tmp/ralph-parallel
+AGENT_COMM_DIR=/tmp/raffaello
 
 # Main branch
 MAIN_BRANCH=main
@@ -275,7 +275,7 @@ MAIN_BRANCH=main
 Load before running:
 ```bash
 source .env
-./ralph.sh
+./raffaello.sh
 ```
 
 ### Custom Workflow
@@ -337,7 +337,7 @@ git branch | grep 'story-' | xargs git branch -d
 
 ### Issue: Stories Not Executing
 
-**Symptom**: Ralph starts but no stories execute
+**Symptom**: Raffaello starts but no stories execute
 
 **Solution**:
 ```bash
@@ -398,7 +398,7 @@ ls -la workflows/
 
 ## Next Steps
 
-Now that you have Ralph Parallel running:
+Now that you have Raffaello running:
 
 1. **Read the full documentation**:
    - [DESIGN.md](docs/DESIGN.md) - Complete design
@@ -423,8 +423,8 @@ Now that you have Ralph Parallel running:
 ## Getting Help
 
 - **Documentation**: Read the docs/ directory
-- **GitHub Issues**: Report bugs at github.com/yourusername/ralph-parallel/issues
-- **Discussions**: Ask questions at github.com/yourusername/ralph-parallel/discussions
+- **GitHub Issues**: Report bugs at github.com/yourusername/raffaello/issues
+- **Discussions**: Ask questions at github.com/yourusername/raffaello/discussions
 
 ## Example Session
 
@@ -433,8 +433,8 @@ Here's a complete example session:
 ```bash
 # 1. Setup
 cd ~/projects/my-app
-git clone https://github.com/yourusername/ralph-parallel
-cd ralph-parallel
+git clone https://github.com/yourusername/raffaello
+cd raffaello
 
 # 2. Create PRD
 cat > prd.json <<EOF
@@ -462,8 +462,8 @@ cat > prd.json <<EOF
 }
 EOF
 
-# 3. Run Ralph
-./ralph.sh
+# 3. Run Raffaello
+./raffaello.sh
 
 # 4. Monitor (in another terminal)
 tail -f progress.txt
@@ -477,15 +477,15 @@ jq '.userStories[] | {id, passes}' prd.json
 # Should show passes=true for both
 ```
 
-Congratulations! You've successfully run Ralph Parallel!
+Congratulations! You've successfully run Raffaello!
 
 ---
 
 # 中文版本
 
-> [English](#ralph-parallel---quick-start-guide) | **中文**
+> [English](#raffaello---quick-start-guide) | **中文**
 
-在 5 分钟内让 Ralph Parallel 运行起来！
+在 5 分钟内让 Raffaello 运行起来！
 
 ## 先决条件
 
@@ -499,8 +499,8 @@ Congratulations! You've successfully run Ralph Parallel!
 ### 步骤 1：克隆仓库
 
 ```bash
-git clone https://github.com/yourusername/ralph-parallel
-cd ralph-parallel
+git clone https://github.com/yourusername/raffaello
+cd raffaello
 ```
 
 ### 步骤 2：安装依赖
@@ -587,7 +587,7 @@ cat prd.json
 }
 ```
 
-## 运行 Ralph Parallel
+## 运行 Raffaello
 
 ### 基本执行
 
@@ -595,20 +595,20 @@ cat prd.json
 # 首先分析依赖关系（可选）
 ./lib/dependency-analyzer.sh prd.json
 
-# 运行 Ralph Parallel
-./ralph.sh
+# 运行 Raffaello
+./raffaello.sh
 ```
 
 你会看到类似这样的输出:
 ```
-[RALPH] 开始 Ralph Parallel 执行...
-[RALPH] 找到 2 个待实现的 stories
-[RALPH] 分析依赖关系...
-[RALPH] 创建了 2 个批次:
-[RALPH]   Batch 1: US001
-[RALPH]   Batch 2: US002 (依赖 US001)
+[RAFFAELLO] 开始 Raffaello 执行...
+[RAFFAELLO] 找到 2 个待实现的 stories
+[RAFFAELLO] 分析依赖关系...
+[RAFFAELLO] 创建了 2 个批次:
+[RAFFAELLO]   Batch 1: US001
+[RAFFAELLO]   Batch 2: US002 (依赖 US001)
 
-[RALPH] 执行 Batch 1 (1 个stories并行)...
+[RAFFAELLO] 执行 Batch 1 (1 个stories并行)...
 [STORY] 执行 story US001: 添加任务创建功能
 [STORY]   使用工作流: simple
 [ORCH] Phase 1: coder
@@ -617,7 +617,7 @@ cat prd.json
   ... (agent 工作中) ...
 [STORY] ✓ Story US001 完成
 
-[RALPH] 执行 Batch 2 (1 个stories并行)...
+[RAFFAELLO] 执行 Batch 2 (1 个stories并行)...
 [STORY] 执行 story US002: 添加任务删除功能
   ... (相同流程) ...
 [STORY] ✓ Story US002 完成
@@ -626,18 +626,18 @@ cat prd.json
 [MERGE] ✓ story-US001 合并完成 (fast-forward)
 [MERGE] ✓ story-US002 合并完成 (fast-forward)
 
-[RALPH] === 所有 Stories 完成! ===
+[RAFFAELLO] === 所有 Stories 完成! ===
 ```
 
 ### 监控进度
 
-在 Ralph 运行时,你可以在另一个终端中监控:
+在 Raffaello 运行时,你可以在另一个终端中监控:
 ```bash
 # 查看进度日志
 tail -f progress.txt
 
 # 检查 agent 通信
-ls -la /tmp/ralph-parallel/
+ls -la /tmp/raffaello/
 
 # 检查 git 分支
 git branch
@@ -652,7 +652,7 @@ jq '.userStories[] | {id, passes}' prd.json
 
 ## 理解工作流
 
-Ralph Parallel 有 3 个内置工作流:
+Raffaello 有 3 个内置工作流:
 
 ### Simple Workflow (最快)
 ```yaml
@@ -700,7 +700,7 @@ phases:
 
 ## 处理冲突
 
-如果发生合并冲突, Ralph 会:
+如果发生合并冲突, Raffaello 会:
 
 1. **分析严重程度** (LOW/MEDIUM/HIGH)
 2. **自动合并** 如果是 LOW 严重性
@@ -709,7 +709,7 @@ phases:
 
 ### 手动冲突解决
 
-如果 Ralph 无法自动解决:
+如果 Raffaello 无法自动解决:
 ```bash
 # 查看冲突分析
 ./lib/conflict-analyzer.sh analyze
@@ -741,7 +741,7 @@ git commit -m "解决 story-US001 的冲突"
 MAX_PARALLEL_STORIES=3
 
 # 通信目录
-AGENT_COMM_DIR=/tmp/ralph-parallel
+AGENT_COMM_DIR=/tmp/raffaello
 
 # 主分支
 MAIN_BRANCH=main
@@ -750,7 +750,7 @@ MAIN_BRANCH=main
 使用前加载:
 ```bash
 source .env
-./ralph.sh
+./raffaello.sh
 ```
 
 ### 自定义工作流
@@ -812,7 +812,7 @@ git branch | grep 'story-' | xargs git branch -d
 
 ### 问题: Stories 未执行
 
-**症状**: Ralph 启动但没有 stories 执行
+**症状**: Raffaello 启动但没有 stories 执行
 
 **解决方案**:
 ```bash
@@ -873,7 +873,7 @@ ls -la workflows/
 
 ## 下一步
 
-现在你已经让 Ralph Parallel 运行起来了:
+现在你已经让 Raffaello 运行起来了:
 
 1. **阅读完整文档**:
    - [DESIGN.md](docs/DESIGN.md) - 完整设计
@@ -898,8 +898,8 @@ ls -la workflows/
 ## 获取帮助
 
 - **文档**: 阅读 docs/ 目录
-- **GitHub Issues**: 在 github.com/yourusername/ralph-parallel/issues 报告 bug
-- **讨论**: 在 github.com/yourusername/ralph-parallel/discussions 提问
+- **GitHub Issues**: 在 github.com/yourusername/raffaello/issues 报告 bug
+- **讨论**: 在 github.com/yourusername/raffaello/discussions 提问
 
 ## 完整示例会话
 
@@ -908,8 +908,8 @@ ls -la workflows/
 ```bash
 # 1. 设置
 cd ~/projects/my-app
-git clone https://github.com/yourusername/ralph-parallel
-cd ralph-parallel
+git clone https://github.com/yourusername/raffaello
+cd raffaello
 
 # 2. 创建 PRD
 cat > prd.json <<EOF
@@ -937,8 +937,8 @@ cat > prd.json <<EOF
 }
 EOF
 
-# 3. 运行 Ralph
-./ralph.sh
+# 3. 运行 Raffaello
+./raffaello.sh
 
 # 4. 监控（在另一个终端）
 tail -f progress.txt
@@ -952,8 +952,8 @@ jq '.userStories[] | {id, passes}' prd.json
 # 应该显示两者都是 passes=true
 ```
 
-恭喜! 你已成功运行 Ralph Parallel!
+恭喜! 你已成功运行 Raffaello!
 
 ---
 
-**Ralph Parallel** - 5 分钟快速开始 🚀
+**Raffaello** - 5 分钟快速开始 🚀

@@ -57,7 +57,7 @@ cat >"$tmp/repo/lib/agent-api.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel}"
+AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/raffaello}"
 
 spawn_agent() {
   local agent_name=$1
@@ -107,7 +107,7 @@ if ! rg -q "conflict-escalation\.md" "$tmp/merge.log"; then
 fi
 
 # Escalation report should include conflicted files.
-report_path="${AGENT_COMM_DIR:-/tmp/ralph-parallel}/merge/conflict-escalation.md"
+report_path="${AGENT_COMM_DIR:-/tmp/raffaello}/merge/conflict-escalation.md"
 if [[ ! -f "$report_path" ]]; then
   echo "Expected escalation report to exist"
   exit 1

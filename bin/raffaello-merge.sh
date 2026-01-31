@@ -7,9 +7,9 @@ PROJECT_DIR="$(pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  ./ralph-merge.sh [--project-dir DIR] list
-  ./ralph-merge.sh [--project-dir DIR] merge-pass
-  ./ralph-merge.sh [--project-dir DIR] merge <STORY-ID> [<STORY-ID> ...]
+  ./raffaello-merge.sh [--project-dir DIR] list
+  ./raffaello-merge.sh [--project-dir DIR] merge-pass
+  ./raffaello-merge.sh [--project-dir DIR] merge <STORY-ID> [<STORY-ID> ...]
 
 Notes:
   - Merges story branches (story-<STORY-ID>) into the current branch (recommended: master).

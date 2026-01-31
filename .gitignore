@@ -5,7 +5,7 @@ test-*-prd.json
 *.test.json
 
 # Agent communication directory
-/tmp/ralph-parallel/
+/tmp/raffaello/
 
 # Progress and state files (but keep execution markers)
 progress.txt

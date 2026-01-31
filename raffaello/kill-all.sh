@@ -4,25 +4,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-AGENT_COMM_DIR_DEFAULT="/tmp/ralph-parallel"
+AGENT_COMM_DIR_DEFAULT="/tmp/raffaello"
 
 usage() {
   cat <<'EOF'
-kill-all.sh - stop Ralph + agents and optionally clean temp dirs
+kill-all.sh - stop Raffaello + agents and optionally clean temp dirs
 
 Usage:
   kill-all.sh [--project-dir DIR] [--clean-comm] [--clean-worktrees] [--clean-logs] [--clean-all] [--dry-run]
 
 Options:
-  --project-dir DIR     Project directory that contains .ralph-logs/.ralph-worktrees (default: cwd)
+  --project-dir DIR     Project directory that contains .raffaello-logs/.raffaello-worktrees (default: cwd)
   --clean-comm          Remove $AGENT_COMM_DIR/STORY-* and monitor state (default: off)
-  --clean-worktrees      Remove project .ralph-worktrees (default: off)
-  --clean-logs           Remove project .ralph-logs (default: off)
+  --clean-worktrees      Remove project .raffaello-worktrees (default: off)
+  --clean-logs           Remove project .raffaello-logs (default: off)
   --clean-all            Equivalent to: --clean-comm --clean-worktrees --clean-logs
   --dry-run              Print what would be killed/removed
 
 Environment:
-  AGENT_COMM_DIR         Defaults to /tmp/ralph-parallel
+  AGENT_COMM_DIR         Defaults to /tmp/raffaello
 
 Examples:
   /aml/raffaello/raffaello/kill-all.sh
@@ -77,7 +77,7 @@ say "[kill-all] project=$PROJECT_DIR"
 say "[kill-all] agent_comm_dir=$AGENT_COMM_DIR"
 say "[kill-all] clean_comm=$CLEAN_COMM clean_worktrees=$CLEAN_WORKTREES clean_logs=$CLEAN_LOGS dry_run=$DRY_RUN"
 
-process_pattern='(\./raffaello/ralph\.sh|\.\./raffaello/ralph\.sh|/aml/raffaello/ralph\.sh|raffaello/ralph\.sh|/aml/raffaello/orchestrator\.sh|raffaello/orchestrator\.sh|/aml/raffaello/raffaello/monitor\.sh|raffaello/raffaello/monitor\.sh|/aml/raffaello/raffaello/monitor-kill\.sh|raffaello/raffaello/monitor-kill\.sh|(^|/)(claude|claude-code)( |$)|cc-pid-|cc-sync)'
+process_pattern='(\./raffaello\.sh|\.\./raffaello\.sh|/aml/raffaello/raffaello\.sh|raffaello/raffaello\.sh|/aml/raffaello/orchestrator\.sh|raffaello/orchestrator\.sh|/aml/raffaello/raffaello/monitor\.sh|raffaello/raffaello/monitor\.sh|/aml/raffaello/raffaello/monitor-kill\.sh|raffaello/raffaello/monitor-kill\.sh|(^|/)(claude|claude-code)( |$)|cc-pid-|cc-sync)'
 
 say "[kill-all] matching processes:"
 pgrep -af "$process_pattern" || true
@@ -112,25 +112,25 @@ if [[ $CLEAN_WORKTREES -eq 1 ]]; then
   if [[ -d "$PROJECT_DIR/.git" ]]; then
     run "git -C '$PROJECT_DIR' worktree prune >/dev/null 2>&1 || true"
 
-    # Force-remove any tracked worktrees under the ralph worktrees directory.
+    # Force-remove any tracked worktrees under the raffaello worktrees directory.
     # Use --force to handle cases like: "prunable gitdir file points to non-existent location".
-    if [[ -d "$PROJECT_DIR/.ralph-worktrees" ]]; then
+    if [[ -d "$PROJECT_DIR/.raffaello-worktrees" ]]; then
       while IFS= read -r wt; do
         [[ -z "$wt" ]] && continue
         run "git -C '$PROJECT_DIR' worktree remove --force '$wt' >/dev/null 2>&1 || true"
-      done < <(git -C "$PROJECT_DIR" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' | grep -F "$PROJECT_DIR/.ralph-worktrees/" || true)
+      done < <(git -C "$PROJECT_DIR" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' | grep -F "$PROJECT_DIR/.raffaello-worktrees/" || true)
     fi
 
     run "git -C '$PROJECT_DIR' worktree prune >/dev/null 2>&1 || true"
   fi
 
-  run "rm -rf '$PROJECT_DIR/.ralph-worktrees' 2>/dev/null || true"
+  run "rm -rf '$PROJECT_DIR/.raffaello-worktrees' 2>/dev/null || true"
   say "[kill-all] done cleaning worktrees"
 fi
 
 if [[ $CLEAN_LOGS -eq 1 ]]; then
   say "[kill-all] cleaning project logs..."
-  run "rm -rf '$PROJECT_DIR/.ralph-logs' 2>/dev/null || true"
+  run "rm -rf '$PROJECT_DIR/.raffaello-logs' 2>/dev/null || true"
   say "[kill-all] done cleaning logs"
 fi
 

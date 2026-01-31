@@ -76,8 +76,8 @@ cat >"$tmp_dir/proj/prd.json" <<'EOF'
 EOF
 
 cat >"$tmp_dir/proj/.gitignore" <<'EOF'
-.ralph-logs/
-.ralph-worktrees/
+.raffaello-logs/
+.raffaello-worktrees/
 EOF
 
 git -C "$tmp_dir/proj" init -q
@@ -90,7 +90,7 @@ cat >"$tmp_dir/orchestrator.sh" <<'EOF'
 set -euo pipefail
 story_id="$1"
 echo "[ORCHESTRATOR] story=$story_id"
-COMMUNICATION_DIRECTORY="${COMMUNICATION_DIRECTORY:-/tmp/ralph-parallel/$story_id}"
+COMMUNICATION_DIRECTORY="${COMMUNICATION_DIRECTORY:-/tmp/raffaello/$story_id}"
 mkdir -p "$COMMUNICATION_DIRECTORY"
 touch "$COMMUNICATION_DIRECTORY/.planner-success"
 sleep 0.1
@@ -98,19 +98,19 @@ exit 0
 EOF
 chmod +x "$tmp_dir/orchestrator.sh"
 
-# Copy minimal ralph-parallel tree so library sourcing works
+# Copy minimal raffaello tree so library sourcing works
 cp -R "$ROOT_DIR/lib" "$tmp_dir/lib"
-cp "$ROOT_DIR/ralph.sh" "$tmp_dir/ralph.sh"
+cp "$ROOT_DIR/raffaello.sh" "$tmp_dir/raffaello.sh"
 
 export MAX_PARALLEL_STORIES=2
-export LOG_DIR="$tmp_dir/proj/.ralph-logs"
+export LOG_DIR="$tmp_dir/proj/.raffaello-logs"
 export AGENT_COMM_DIR="$tmp_dir/comm"
 mkdir -p "$AGENT_COMM_DIR"
 
 pushd "$tmp_dir/proj" >/dev/null
 set +e
-stdbuf -oL -eL bash "$tmp_dir/ralph.sh" >"$tmp_dir/out.log" 2>&1
-ralph_exit=$?
+stdbuf -oL -eL bash "$tmp_dir/raffaello.sh" >"$tmp_dir/out.log" 2>&1
+raffaello_exit=$?
 set -e
 popd >/dev/null
 

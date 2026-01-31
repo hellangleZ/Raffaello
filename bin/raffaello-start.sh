@@ -10,7 +10,7 @@ PROJECT_DIR_ARG=""
 usage() {
   cat <<'EOF'
 Usage:
-  ./ralph-start.sh [--project-dir DIR] [--profile fast|safe|very-safe] [--iters N] [--stall-secs S] [--interval-secs S]
+  ./raffaello-start.sh [--project-dir DIR] [--profile fast|safe|very-safe] [--iters N] [--stall-secs S] [--interval-secs S]
 
 Options:
   --project-dir DIR  Target project directory (default: cwd)
@@ -27,13 +27,13 @@ Profiles:
   very-safe: stall=900  (least likely to kill, slower to recover from real hangs)
 
 Behavior:
-  - Starts monitor in the background (nohup) writing to .ralph-logs/monitor.nohup.log
-  - Runs ralph.sh in the foreground
+  - Starts monitor in the background (nohup) writing to .raffaello-logs/monitor.nohup.log
+  - Runs raffaello.sh in the foreground
   - Prints tail commands for a second terminal
 EOF
 }
 
-PROFILE=${RALPH_PROFILE:-safe}
+PROFILE=${RAFFAELLO_PROFILE:-safe}
 ITERS=${GLOBAL_MAX_ITERATIONS:-30}
 STALL_SECS=${MONITOR_STALL_SECS:-}
 INTERVAL_SECS=${MONITOR_INTERVAL_SECS:-10}
@@ -52,7 +52,7 @@ if [[ -z "$STALL_SECS" ]]; then
 fi
 
 if [[ -z "$STALL_SECS" ]]; then
-  echo "[ralph-start] ERROR: unknown profile '$PROFILE'" >&2
+  echo "[raffaello-start] ERROR: unknown profile '$PROFILE'" >&2
   usage
   exit 1
 fi
@@ -81,34 +81,34 @@ if [[ -n "${PROFILE:-}" ]]; then
   fi
 fi
 
-echo "[ralph-start] project=$PROJECT_DIR"
-echo "[ralph-start] project=$PROJECT_DIR profile=$PROFILE iters=$ITERS stall=$STALL_SECS interval=$INTERVAL_SECS"
+echo "[raffaello-start] project=$PROJECT_DIR"
+echo "[raffaello-start] project=$PROJECT_DIR profile=$PROFILE iters=$ITERS stall=$STALL_SECS interval=$INTERVAL_SECS"
 cd "$PROJECT_DIR"
 
-mkdir -p .ralph-logs
+mkdir -p .raffaello-logs
 
 # Per-project comm dir to avoid cross-run monitor confusion
-export AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/ralph-parallel-$(echo "$PROJECT_DIR" | sha256sum | awk '{print $1}' | cut -c1-10)}"
+export AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/raffaello-parallel-$(echo "$PROJECT_DIR" | sha256sum | awk '{print $1}' | cut -c1-10)}"
 
-# Start monitor in background (observe-only); ralph.sh may start monitor-kill separately.
+# Start monitor in background (observe-only); raffaello.sh may start monitor-kill separately.
 nohup env SHOW_STALE_STORIES=false SHOW_INACTIVE=false \
   INTERVAL_SECS="$INTERVAL_SECS" STALL_SECS="$STALL_SECS" \
   bash /aml/raffaello/raffaello/monitor.sh "$PROJECT_DIR" \
-  > .ralph-logs/monitor.nohup.log 2>&1 &
+  > .raffaello-logs/monitor.nohup.log 2>&1 &
 
-echo "[ralph-start] monitor pid=$! (log: .ralph-logs/monitor.nohup.log)"
+echo "[raffaello-start] monitor pid=$! (log: .raffaello-logs/monitor.nohup.log)"
 
 cat <<EOF
 
 Second terminal (recommended):
-  tail -f .ralph-logs/monitor.nohup.log
-  tail -f .ralph-logs/STORY-XXX.log
+  tail -f .raffaello-logs/monitor.nohup.log
+  tail -f .raffaello-logs/STORY-XXX.log
 
 EOF
 
-exec env RALPH_ASSUME_YES=true \
+exec env RAFFAELLO_ASSUME_YES=true \
   GLOBAL_MAX_ITERATIONS="$ITERS" \
   AUTO_MONITOR_KILL=true \
   MONITOR_STALL_SECS="$STALL_SECS" \
   MONITOR_INTERVAL_SECS="$INTERVAL_SECS" \
-  "$SCRIPT_DIR/../ralph.sh"
+  "$SCRIPT_DIR/../raffaello.sh"

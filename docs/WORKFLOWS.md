@@ -2,7 +2,7 @@
 
 > **English** | [中文](#中文版本)
 
-Ralph Parallel uses YAML-based workflow configurations to define how user stories are executed. Each workflow specifies a sequence of phases (agents) and retry policies.
+Raffaello uses YAML-based workflow configurations to define how user stories are executed. Each workflow specifies a sequence of phases (agents) and retry policies.
 
 ## Available Workflows
 
@@ -323,7 +323,7 @@ retry_policy:
 
 > [English](#workflow-system) | **中文**
 
-Ralph Parallel 使用基于 YAML 的工作流配置来定义用户故事的执行方式。每个工作流指定一系列阶段（agents）和重试策略。
+Raffaello 使用基于 YAML 的工作流配置来定义用户故事的执行方式。每个工作流指定一系列阶段（agents）和重试策略。
 
 ## 可用工作流
 

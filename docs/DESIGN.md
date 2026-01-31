@@ -1,4 +1,4 @@
-# Ralph Parallel - Design Document
+# Raffaello - Design Document
 
 > **English** | [中文](#中文版本)
 
@@ -23,7 +23,7 @@ Iteration 3: Agent → Story 3 → passes:true
 **Multi-Agent Ralph (Parallel)**:
 ```
            ┌→ Agent A → Story 1 → passes:true ┐
-ralph.sh ──┼→ Agent B → Story 2 → passes:true ├→ Auto-merge
+raffaello.sh ──┼→ Agent B → Story 2 → passes:true ├→ Auto-merge
            └→ Agent C → Story 3 → passes:true ┘
 ```
 
@@ -49,7 +49,7 @@ Each story is managed by an **orchestrator** that controls 4 phase subagents!
 
 ### Project Name
 
-**`ralph-parallel`**
+**`raffaello`**
 
 Rationale:
 - Simple and clear
@@ -59,8 +59,8 @@ Rationale:
 ### Directory Structure
 
 ```
-/Users/chilikevin/aml/ralph-parallel/
-├── ralph.sh              # Parallel version main loop
+/Users/chilikevin/aml/raffaello/
+├── raffaello.sh              # Parallel version main loop
 ├── orchestrator.sh       # Single story orchestrator (manages subagents)
 ├── merge-stories.sh      # Auto-merge multiple story git branches
 ├── prd.json              # PRD file (compatible with old format)
@@ -84,7 +84,7 @@ Rationale:
 
 ### 1. Parallel Execution Engine
 
-**ralph.sh Logic**:
+**raffaello.sh Logic**:
 ```bash
 # Read prd.json
 stories=$(jq -r '.userStories[] | select(.passes == false) | .id' prd.json)
@@ -499,9 +499,9 @@ execute_workflow() {
       spawn_agent "$cli" "$phase" "Execute $phase for story $story_id"
 
       # Check success marker file
-      if [[ -f ".ralph-phase-$phase-success" ]]; then
+      if [[ -f ".raffaello-phase-$phase-success" ]]; then
         success=true
-        rm ".ralph-phase-$phase-success"
+        rm ".raffaello-phase-$phase-success"
         break
       fi
 
@@ -524,7 +524,7 @@ execute_workflow() {
 ### Phase 1: Project Skeleton and CLI Adaptation ✅
 **Time**: 1-2 hours
 
-1. ✅ Create project directory `/Users/chilikevin/aml/ralph-parallel/`
+1. ✅ Create project directory `/Users/chilikevin/aml/raffaello/`
 2. ✅ Implement `detect-cli.sh` - CLI detection
 3. ✅ Implement `agent-api.sh` - Unified agent calling interface
 4. ✅ Implement `load-agents.sh` - Dynamic agent loading
@@ -534,7 +534,7 @@ execute_workflow() {
 ### Phase 2: Core Parallel Engine
 **Time**: 2-3 hours
 
-1. Implement `ralph.sh` - Main loop (parallel execution)
+1. Implement `raffaello.sh` - Main loop (parallel execution)
 2. Implement `orchestrator.sh` - Single story phase management
 3. Implement `dependency-analyzer.sh` - Dependency analysis
 4. Implement Git branch management logic
@@ -587,7 +587,7 @@ execute_workflow() {
 
 ## User Decisions ✅
 
-### 1. Project Name: `ralph-parallel` ✅
+### 1. Project Name: `raffaello` ✅
 Simple and clear, highlights core feature
 
 ### 2. Supported CLI: Claude Code Only ✅
@@ -646,7 +646,7 @@ phases:
 
 **AI Assist Mode (Optional)**:
 ```bash
-ralph.sh --analyze-deps
+raffaello.sh --analyze-deps
 # AI analyzes all stories, generates dependency suggestions
 # User reviews and confirms
 ```
@@ -681,7 +681,7 @@ conflict_severity = {
 
 # 中文版本
 
-> [English](#ralph-parallel---design-document) | **中文**
+> [English](#raffaello---design-document) | **中文**
 
 ## 项目背景
 
@@ -704,7 +704,7 @@ Iteration 3: Agent → Story 3 → passes:true
 **Multi-Agent Ralph（并行）**：
 ```
            ┌→ 代理 A → 故事 1 → passes:true ┐
-ralph.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
+raffaello.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
            └→ 代理 C → 故事 3 → passes:true ┘
 ```
 
@@ -730,7 +730,7 @@ ralph.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
 
 ### 项目名称
 
-**`ralph-parallel`**
+**`raffaello`**
 
 理由：
 - 简洁清晰
@@ -744,7 +744,7 @@ ralph.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
 ### Phase 1: 项目骨架和 CLI 适配 ✅
 **时间**: 1-2 小时
 
-1. ✅ 创建项目目录 `/Users/chilikevin/aml/ralph-parallel/`
+1. ✅ 创建项目目录 `/Users/chilikevin/aml/raffaello/`
 2. ✅ 实现 `detect-cli.sh` - CLI 检测
 3. ✅ 实现 `agent-api.sh` - 统一 agent 调用接口
 4. ✅ 实现 `load-agents.sh` - 动态 agent 加载
@@ -754,7 +754,7 @@ ralph.sh ──┼→ 代理 B → 故事 2 → passes:true ├→ 自动合并
 ### Phase 2: 核心并行引擎
 **时间**: 2-3 小时
 
-1. 实现 `ralph.sh` - 主循环（并行执行）
+1. 实现 `raffaello.sh` - 主循环（并行执行）
 2. 实现 `orchestrator.sh` - 单 story 的阶段管理
 3. 实现 `dependency-analyzer.sh` - 依赖分析
 4. 实现 Git 分支管理逻辑
