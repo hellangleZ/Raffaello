@@ -2,7 +2,7 @@
 
 This directory is a Raffaello project workspace.
 
-Raffaello runs each user story on its own git branch (`story-<STORY-ID>`) inside a git worktree under `.raffaello-worktrees/`. The main project directory (`/aml/test`) will **not** automatically contain story code until you merge those branches.
+Raffaello runs each user story on its own git branch (`story-<STORY-ID>`) inside a git worktree under `.raffaello-worktrees/`. The main project directory will **not** automatically contain story code until you merge those branches.
 
 ---
 
@@ -10,17 +10,17 @@ Raffaello runs each user story on its own git branch (`story-<STORY-ID>`) inside
 
 这个目录是 Raffaello 的项目工作区。
 
-Raffaello 会把每个用户故事放到独立的 git 分支（`story-<STORY-ID>`）里运行，并且把代码放到 `.raffaello-worktrees/` 下的 git worktree 目录中。主目录（`/aml/test`）在你 **merge 分支回主分支之前**，通常不会出现故事代码，这是正常现象。
+Raffaello 会把每个用户故事放到独立的 git 分支（`story-<STORY-ID>`）里运行，并且把代码放到 `.raffaello-worktrees/` 下的 git worktree 目录中。主目录在你 **merge 分支回主分支之前**，通常不会出现故事代码，这是正常现象。
 
 
 ## 0) Prerequisites
 
-- Be in the project directory: `cd /aml/test`
+- Be in the project directory: `cd <YOUR_PROJECT_DIR>`
 - Ensure your PRD exists: `prd.json`
 
 ## 0) 前置条件
 
-- 进入项目目录：`cd /aml/test`
+- 进入项目目录：`cd <YOUR_PROJECT_DIR>`
 - 确保 PRD 文件存在：`prd.json`
 
 
@@ -29,40 +29,40 @@ Raffaello 会把每个用户故事放到独立的 git 分支（`story-<STORY-ID>
 Use the one-button starter:
 
 ```bash
-cd /aml/test
-/aml/raffaello/bin/raffaello-start.sh --project-dir /aml/test
+cd <YOUR_PROJECT_DIR>
+./bin/raffaello-start.sh --project-dir .
 ```
 
 Optional flags:
 
 ```bash
-/aml/raffaello/bin/raffaello-start.sh --project-dir /aml/test --iters 30 --stall-secs 300 --interval-secs 10
+./bin/raffaello-start.sh --project-dir . --iters 30 --stall-secs 300 --interval-secs 10
 ```
 
 What it does:
 
 - Starts the monitor in the background (nohup) and writes to `.raffaello-logs/monitor.nohup.log`.
-- Runs `/aml/raffaello/raffaello.sh` in the foreground with safe defaults (`RAFFAELLO_ASSUME_YES=true`, auto monitor-kill enabled).
+- Runs `./raffaello.sh` in the foreground with safe defaults (`RAFFAELLO_ASSUME_YES=true`, auto monitor-kill enabled).
 
 ## 1) 开始一轮
 
 一键启动：
 
 ```bash
-cd /aml/test
-/aml/raffaello/bin/raffaello-start.sh --project-dir /aml/test
+cd <YOUR_PROJECT_DIR>
+./bin/raffaello-start.sh --project-dir .
 ```
 
 可选参数：
 
 ```bash
-/aml/raffaello/bin/raffaello-start.sh --project-dir /aml/test --iters 30 --stall-secs 300 --interval-secs 10
+./bin/raffaello-start.sh --project-dir . --iters 30 --stall-secs 300 --interval-secs 10
 ```
 
 它做的事情：
 
 - 后台启动 monitor（nohup），日志写入 `.raffaello-logs/monitor.nohup.log`
-- 前台运行 `/aml/raffaello/raffaello.sh`（带默认参数，跳过交互确认 + 自动 watch-dog）
+- 前台运行 `./raffaello.sh`（带默认参数，跳过交互确认 + 自动 watch-dog）
 
 ### Parameters / 参数说明
 
@@ -93,7 +93,7 @@ Environment variables used by the starter:
 Open a second terminal and run:
 
 ```bash
-cd /aml/test
+cd <YOUR_PROJECT_DIR>
 tail -f .raffaello-logs/monitor.nohup.log
 ```
 
@@ -116,7 +116,7 @@ cat /tmp/raffaello/STORY-XXX/coder.pid
 建议打开第二个终端：
 
 ```bash
-cd /aml/test
+cd <YOUR_PROJECT_DIR>
 tail -f .raffaello-logs/monitor.nohup.log
 ```
 
@@ -149,7 +149,7 @@ cat /tmp/raffaello/STORY-XXX/coder.pid
 Story outputs live in worktrees:
 
 ```bash
-cd /aml/test/.raffaello-worktrees/STORY-011
+cd .raffaello-worktrees/STORY-011
 git log --oneline -n 10
 ls
 ```
@@ -157,7 +157,7 @@ ls
 Run tests in a worktree (if the story created/updated them):
 
 ```bash
-cd /aml/test/.raffaello-worktrees/STORY-011
+cd .raffaello-worktrees/STORY-011
 npm test
 ```
 
@@ -166,7 +166,7 @@ npm test
 每个 story 的代码在 worktree 目录：
 
 ```bash
-cd /aml/test/.raffaello-worktrees/STORY-011
+cd .raffaello-worktrees/STORY-011
 git log --oneline -n 10
 ls
 ```
@@ -174,7 +174,7 @@ ls
 在该 worktree 里跑测试（如果项目里有）：
 
 ```bash
-cd /aml/test/.raffaello-worktrees/STORY-011
+cd .raffaello-worktrees/STORY-011
 npm test
 ```
 
@@ -184,26 +184,26 @@ npm test
 When you want to stop everything cleanly:
 
 ```bash
-cd /aml/test
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test
+cd <YOUR_PROJECT_DIR>
+./bin/raffaello-finish.sh --project-dir .
 ```
 
 If you also want to clean comm/worktrees state:
 
 ```bash
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test --clean
+./bin/raffaello-finish.sh --project-dir . --clean
 ```
 
 If you want to automatically merge only `passes=true` stories into the current branch (recommended: your main branch (e.g. `main`)):
 
 ```bash
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test --clean --merge-pass
+./bin/raffaello-finish.sh --project-dir . --clean --merge-pass
 ```
 
 Dry-run (prints actions without doing destructive steps):
 
 ```bash
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test --clean --merge-pass --dry-run
+./bin/raffaello-finish.sh --project-dir . --clean --merge-pass --dry-run
 ```
 
 ## 4) 收尾一轮（停进程 + 可选 merge）
@@ -211,26 +211,26 @@ Dry-run (prints actions without doing destructive steps):
 只停干净（不 merge）：
 
 ```bash
-cd /aml/test
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test
+cd <YOUR_PROJECT_DIR>
+./bin/raffaello-finish.sh --project-dir .
 ```
 
 停干净 + 清理 comm/worktrees：
 
 ```bash
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test --clean
+./bin/raffaello-finish.sh --project-dir . --clean
 ```
 
 停干净 + 清理 + 自动把 `passes=true` 的 story 合并回当前分支（推荐在你的主分支（例如 `main`）上执行：
 
 ```bash
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test --clean --merge-pass
+./bin/raffaello-finish.sh --project-dir . --clean --merge-pass
 ```
 
 演练模式（只打印要做的事情，不执行破坏性操作）：
 
 ```bash
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test --clean --merge-pass --dry-run
+./bin/raffaello-finish.sh --project-dir . --clean --merge-pass --dry-run
 ```
 
 ### raffaello-finish.sh 参数说明
@@ -251,20 +251,20 @@ cd /aml/test
 List stories that are marked `passes=true` in `prd.json`:
 
 ```bash
-cd /aml/test
-/aml/raffaello/bin/raffaello-merge.sh --project-dir /aml/test list
+cd <YOUR_PROJECT_DIR>
+./bin/raffaello-merge.sh --project-dir . list
 ```
 
 Merge all `passes=true` stories in order:
 
 ```bash
-/aml/raffaello/bin/raffaello-merge.sh --project-dir /aml/test merge-pass
+./bin/raffaello-merge.sh --project-dir . merge-pass
 ```
 
 Merge specific stories:
 
 ```bash
-/aml/raffaello/bin/raffaello-merge.sh --project-dir /aml/test merge STORY-011 STORY-010
+./bin/raffaello-merge.sh --project-dir . merge STORY-011 STORY-010
 ```
 
 ## 5) 手动/半自动合并（可选）
@@ -272,26 +272,115 @@ Merge specific stories:
 列出 `passes=true` 的故事：
 
 ```bash
-cd /aml/test
-/aml/raffaello/bin/raffaello-merge.sh --project-dir /aml/test list
+cd <YOUR_PROJECT_DIR>
+./bin/raffaello-merge.sh --project-dir . list
 ```
 
 自动合并所有 `passes=true`（按编号顺序）：
 
 ```bash
-/aml/raffaello/bin/raffaello-merge.sh --project-dir /aml/test merge-pass
+./bin/raffaello-merge.sh --project-dir . merge-pass
 ```
 
 指定合并：
 
 ```bash
-/aml/raffaello/bin/raffaello-merge.sh --project-dir /aml/test merge STORY-011 STORY-010
+./bin/raffaello-merge.sh --project-dir . merge STORY-011 STORY-010
 ```
+
+
+## 6) AI-Powered Merge (Recommended for Conflicts)
+
+When you have multiple story branches with conflicts, use AI merge mode:
+
+```bash
+cd <YOUR_PROJECT_DIR>
+./merge-stories.sh --ai
+```
+
+This will:
+1. Find all `story-*` branches
+2. Attempt to merge each branch into master/main
+3. When conflicts occur, analyze severity (LOW/MEDIUM/HIGH)
+4. Use Claude Code to intelligently resolve conflicts
+5. Automatically commit successful merges
+6. Delete merged branches
+
+**Example output**:
+```
+[MERGE] Starting intelligent merge process...
+[MERGE] AI merge mode enabled (--ai)
+[MERGE] Found 3 story branches to merge
+
+[MERGE] Merging branch: story-STORY-007
+Conflict Analysis:
+[HIGH] src/App.css → manual-review
+[HIGH] src/App.test.tsx → manual-review
+[LOW] src/App.tsx → auto-merge
+[MERGE] Using Claude Code to resolve HIGH severity conflicts...
+[MERGE] Claude Code finished processing
+[MERGE] All conflicts resolved by Claude Code
+[master f13b144] Merge story-STORY-007 into master
+
+[MERGE] === Merge Summary ===
+[MERGE] Successfully merged: 3
+[MERGE] All branches merged successfully!
+```
+
+## 6) AI 智能合并（推荐用于解决冲突）
+
+当多个 story 分支有冲突时，使用 AI 合并模式：
+
+```bash
+cd <YOUR_PROJECT_DIR>
+./merge-stories.sh --ai
+```
+
+它会：
+1. 找到所有 `story-*` 分支
+2. 尝试将每个分支合并到 master/main
+3. 遇到冲突时，分析严重程度（LOW/MEDIUM/HIGH）
+4. 使用 Claude Code 智能解决冲突
+5. 自动提交成功的合并
+6. 删除已合并的分支
+
+**输出示例**：
+```
+[MERGE] Starting intelligent merge process...
+[MERGE] AI merge mode enabled (--ai)
+[MERGE] Found 3 story branches to merge
+
+[MERGE] Merging branch: story-STORY-007
+Conflict Analysis:
+[HIGH] src/App.css → manual-review
+[HIGH] src/App.test.tsx → manual-review
+[LOW] src/App.tsx → auto-merge
+[MERGE] Using Claude Code to resolve HIGH severity conflicts...
+[MERGE] Claude Code finished processing
+[MERGE] All conflicts resolved by Claude Code
+[master f13b144] Merge story-STORY-007 into master
+
+[MERGE] === Merge Summary ===
+[MERGE] Successfully merged: 3
+[MERGE] All branches merged successfully!
+```
+
+### Tips for AI Merge / AI 合并技巧
+
+- **Timeout**: Default is 600 seconds (10 minutes) per merge. Complex merges may need this time.
+- **Clean state**: Ensure you're on master/main branch before running
+- **Check results**: After merge, run tests to verify: `npm test`
+- **Logs**: Check `/tmp/raffaello/merge/` for Claude Code logs
+
+- **超时时间**：默认每次合并 600 秒（10 分钟）。复杂合并可能需要这么长时间。
+- **干净状态**：运行前确保在 master/main 分支
+- **检查结果**：合并后运行测试验证：`npm test`
+- **日志**：查看 `/tmp/raffaello/merge/` 获取 Claude Code 日志
 
 
 ## Notes / Expectations
 
-- If `/aml/test` still looks "empty" after a run, that is expected until you merge story branches.
+- If your project directory still looks "empty" after a run, that is expected until you merge story branches.
 - If you see a story with `passes=false`, check its story log and `/tmp/raffaello/STORY-XXX/*-output.txt`.
 - Repo hygiene:
   - `.gitignore` excludes `.raffaello-logs/`, `.raffaello-worktrees/`, `node_modules/`, `dist/`, `coverage/`, and Playwright outputs.
@@ -299,11 +388,11 @@ cd /aml/test
 
 ## 说明 / 注意事项
 
-- 如果 run 结束后你在 `/aml/test` 看不到代码，这是正常的：代码在 `.raffaello-worktrees/STORY-XXX`，需要合并分支后才会回到主目录。
-- 如果某个故事 `passes=false`：优先看 `/aml/test/.raffaello-logs/STORY-XXX.log`，再看 `/tmp/raffaello/STORY-XXX/*-output.txt` 的最后输出。
+- 如果 run 结束后你在项目目录看不到代码，这是正常的：代码在 `.raffaello-worktrees/STORY-XXX`，需要合并分支后才会回到主目录。
+- 如果某个故事 `passes=false`：优先看 `.raffaello-logs/STORY-XXX.log`，再看 `/tmp/raffaello/STORY-XXX/*-output.txt` 的最后输出。
 - 仓库洁净策略：
   - `.gitignore` 会把 `.raffaello-logs/`、`.raffaello-worktrees/`、`node_modules/`、`dist/`、`coverage/`、Playwright 产物排除掉。
-  - orchestrator 在提交前也会强制把这些目录从暂存区/工作区移除，避免出现“分支里塞满 node_modules/coverage”的灾难提交。
+  - orchestrator 在提交前也会强制把这些目录从暂存区/工作区移除，避免出现"分支里塞满 node_modules/coverage"的灾难提交。
 
 
 ## Troubleshooting / 常见问题排查
@@ -315,7 +404,7 @@ cd /aml/test
 
 ```bash
 SHOW_STALE_STORIES=false SHOW_INACTIVE=false \
-  bash /aml/raffaello/raffaello/monitor.sh /aml/test --stdout
+  ./raffaello/monitor.sh . --stdout
 ```
 
 ### 2) Worktree conflicts (branch already used by worktree)
@@ -326,8 +415,8 @@ SHOW_STALE_STORIES=false SHOW_INACTIVE=false \
 Fix:
 
 ```bash
-cd /aml/test
-/aml/raffaello/bin/raffaello-finish.sh --project-dir /aml/test --clean
+cd <YOUR_PROJECT_DIR>
+./bin/raffaello-finish.sh --project-dir . --clean
 ```
 
 ### 3) "success=yes" but pid still alive
@@ -349,16 +438,16 @@ Recommended:
 
 ```bash
 # Recommended default
-/aml/raffaello/bin/raffaello-start.sh --project-dir /aml/test --profile safe
+./bin/raffaello-start.sh --project-dir . --profile safe
 
 # Fast feedback (may kill long silent steps)
-/aml/raffaello/bin/raffaello-start.sh --project-dir /aml/test --profile fast
+./bin/raffaello-start.sh --project-dir . --profile fast
 
 # Very safe (less likely to kill; slower to recover from real hangs)
-/aml/raffaello/bin/raffaello-start.sh --project-dir /aml/test --profile very-safe
+./bin/raffaello-start.sh --project-dir . --profile very-safe
 
 # You can still override numbers explicitly
-/aml/raffaello/bin/raffaello-start.sh --project-dir /aml/test --iters 30 --stall-secs 600 --interval-secs 10
+./bin/raffaello-start.sh --project-dir . --iters 30 --stall-secs 600 --interval-secs 10
 ```
 
 ### How to choose `stall-secs` / 如何选择 stall 阈值
@@ -428,8 +517,8 @@ Common files:
 
 Implication:
 
-- EN: `/aml/test` stays on your main branch (e.g. `main`) and will look "empty" until you merge story branches.
-- CN: `/aml/test` 默认停留在你的主分支（例如 `main`），所以在 merge 之前看起来像“没代码”。
+- EN: Your project directory stays on your main branch (e.g. `main`) and will look "empty" until you merge story branches.
+- CN: 项目目录默认停留在你的主分支（例如 `main`），所以在 merge 之前看起来像"没代码"。
 
 ### Orchestrator cleanup after completion / 完成后清理残留进程
 

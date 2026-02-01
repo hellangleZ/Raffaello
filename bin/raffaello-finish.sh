@@ -109,7 +109,7 @@ kill_orphan_claude() {
 
 echo "[raffaello-finish] project=$PROJECT_DIR"
 
-KILL_ALL="/aml/raffaello/raffaello/kill-all.sh"
+KILL_ALL="$SCRIPT_DIR/../raffaello/kill-all.sh"
 if [[ ! -x "$KILL_ALL" ]]; then
   echo "ERROR: missing $KILL_ALL" >&2
   exit 2
@@ -144,12 +144,12 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 if [[ "$MERGE_PASS" == "true" ]]; then
-  if [[ ! -x "$PROJECT_DIR/raffaello-merge.sh" ]]; then
-    echo "ERROR: missing $PROJECT_DIR/raffaello-merge.sh" >&2
+  if [[ ! -x "$SCRIPT_DIR/raffaello-merge.sh" ]]; then
+    echo "ERROR: missing $SCRIPT_DIR/raffaello-merge.sh" >&2
     exit 4
   fi
   echo "[raffaello-finish] merging passes=true stories..."
-  run "'$PROJECT_DIR/raffaello-merge.sh' merge-pass"
+  run "'$SCRIPT_DIR/raffaello-merge.sh' --project-dir '$PROJECT_DIR' merge-pass"
 fi
 
 echo "[raffaello-finish] done"

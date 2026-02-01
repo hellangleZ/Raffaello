@@ -183,5 +183,5 @@ esac
 
 echo ""
 echo "Next steps:"
-echo "  - Run '/aml/raffaello/bin/raffaello-start.sh --project-dir <DIR>' to execute stories"
+echo "  - Run './bin/raffaello-start.sh --project-dir <DIR>' to execute stories"
 echo "  - See docs/RAFFAELLO-RUNBOOK.md for start → monitor → merge → finish"

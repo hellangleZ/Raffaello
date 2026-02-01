@@ -523,7 +523,7 @@ See [WORKFLOWS.md](docs/WORKFLOWS.md) for custom workflow creation.
 
 ## Conflict Resolution
 
-Raffaello uses a three-tier strategy:
+Raffaello uses a three-tier strategy with optional AI-powered resolution:
 
 ### Tier 1: Auto-Merge (LOW Severity)
 Automatically resolves:
@@ -545,6 +545,41 @@ Requires human intervention:
 - Complex business logic
 
 Raffaello will pause and provide a detailed conflict report for manual resolution.
+
+### AI-Powered Merge (Recommended)
+
+Use `--ai` flag to enable Claude Code for intelligent conflict resolution:
+
+```bash
+./merge-stories.sh --ai
+```
+
+**How it works**:
+1. Analyzes each conflict file and determines severity (LOW/MEDIUM/HIGH)
+2. For LOW severity: Uses git's auto-merge strategies
+3. For MEDIUM/HIGH severity: Spawns Claude Code to intelligently merge both versions
+4. Claude Code reads the conflict markers, understands the intent of both changes, and produces a merged result
+5. Automatically stages resolved files and commits
+
+**Benefits**:
+- Resolves complex conflicts that would normally require manual intervention
+- Preserves functionality from both branches
+- Handles import merging, function additions, and even some logic conflicts
+- 600-second timeout per merge operation (configurable)
+
+**Example output**:
+```
+[MERGE] Merging branch: story-STORY-007
+[MERGE] Merge conflict detected in story-STORY-007
+Conflict Analysis:
+[HIGH] src/App.css → manual-review
+[HIGH] src/App.test.tsx → manual-review
+[LOW] src/App.tsx → auto-merge
+[MERGE] Using Claude Code to resolve HIGH severity conflicts...
+[MERGE] Claude Code finished processing
+[MERGE] All conflicts resolved by Claude Code
+[master f13b144] Merge story-STORY-007 into master
+```
 
 ## Configuration
 
@@ -575,7 +610,8 @@ claude --version
 ### Main Commands
 ```bash
 ./raffaello.sh                    # Run parallel execution
-./merge-stories.sh            # Merge story branches
+./merge-stories.sh                # Merge story branches (manual mode)
+./merge-stories.sh --ai           # Merge with AI conflict resolution (recommended)
 ```
 
 ### Utility Commands
@@ -762,29 +798,29 @@ You can run a lightweight monitor in the background to periodically report story
 
 ```bash
 # Observe-only (recommended)
-nohup /aml/raffaello/raffaello/monitor.sh /aml/test > /aml/test/.raffaello-logs/monitor.nohup.log 2>&1 &
-tail -f /aml/test/.raffaello-logs/monitor.nohup.log
+nohup ./raffaello/monitor.sh . > .raffaello-logs/monitor.nohup.log 2>&1 &
+tail -f .raffaello-logs/monitor.nohup.log
 
 # Kill-stalled mode (use with care)
 # - Kills an agent PID if: alive=yes, success=no, and output hasn't grown for STALL_SECS
 # - Also writes an abort marker so the orchestrator stops waiting immediately.
 STALL_SECS=300 INTERVAL_SECS=10 \
-  nohup /aml/raffaello/raffaello/monitor-kill.sh /aml/test > /aml/test/.raffaello-logs/monitor-kill.nohup.log 2>&1 &
-tail -f /aml/test/.raffaello-logs/monitor-kill.nohup.log
+  nohup ./raffaello/monitor-kill.sh . > .raffaello-logs/monitor-kill.nohup.log 2>&1 &
+tail -f .raffaello-logs/monitor-kill.nohup.log
 
 # Foreground (prints to terminal)
 STALL_SECS=300 INTERVAL_SECS=10 \
-  /aml/raffaello/raffaello/monitor-kill.sh /aml/test
+  ./raffaello/monitor-kill.sh .
 
 # Quick stop + optional clean (kills raffaello + agents)
-/aml/raffaello/raffaello/kill-all.sh --project-dir /aml/test --clean
+./raffaello/kill-all.sh --project-dir . --clean
 
 # Auto-enable kill-stalled monitor when running raffaello.sh (use with care)
 AUTO_MONITOR_KILL=true MONITOR_STALL_SECS=300 MONITOR_INTERVAL_SECS=10 \
-  /aml/raffaello/raffaello.sh
+  ./raffaello.sh
 
 # Global rerun iterations (re-runs incomplete stories if any failed)
-GLOBAL_MAX_ITERATIONS=2 /aml/raffaello/raffaello.sh
+GLOBAL_MAX_ITERATIONS=2 ./raffaello.sh
 ```
 
 ### Check Story Progress
@@ -1478,7 +1514,7 @@ retry_policy:
 
 ## 冲突解决
 
-三层解决策略基于冲突严重性：
+三层解决策略基于冲突严重性，支持 AI 智能解决：
 
 ### 第 1 层：自动合并（LOW 严重性）
 **标准**：冲突比率 < 5%，无逻辑冲突
@@ -1524,6 +1560,41 @@ function validatePassword(pwd) { ... }
 
 **要求**：手动解决冲突并提交
 
+### AI 智能合并（推荐）
+
+使用 `--ai` 参数启用 Claude Code 智能冲突解决：
+
+```bash
+./merge-stories.sh --ai
+```
+
+**工作原理**：
+1. 分析每个冲突文件，判断严重程度（LOW/MEDIUM/HIGH）
+2. LOW 严重性：使用 git 自动合并策略
+3. MEDIUM/HIGH 严重性：调用 Claude Code 智能合并两个版本
+4. Claude Code 读取冲突标记，理解双方修改意图，生成合并结果
+5. 自动暂存已解决的文件并提交
+
+**优势**：
+- 解决通常需要人工干预的复杂冲突
+- 保留两个分支的所有功能
+- 处理 import 合并、函数添加，甚至一些逻辑冲突
+- 每次合并操作 600 秒超时（可配置）
+
+**输出示例**：
+```
+[MERGE] Merging branch: story-STORY-007
+[MERGE] Merge conflict detected in story-STORY-007
+Conflict Analysis:
+[HIGH] src/App.css → manual-review
+[HIGH] src/App.test.tsx → manual-review
+[LOW] src/App.tsx → auto-merge
+[MERGE] Using Claude Code to resolve HIGH severity conflicts...
+[MERGE] Claude Code finished processing
+[MERGE] All conflicts resolved by Claude Code
+[master f13b144] Merge story-STORY-007 into master
+```
+
 ## 配置
 
 ### 环境变量
@@ -1561,6 +1632,12 @@ export WORKFLOW_DIR="./workflows"
 
 # 运行特定 story
 ./orchestrator.sh US001
+
+# 合并 story 分支（手动模式）
+./merge-stories.sh
+
+# 使用 AI 智能合并（推荐）
+./merge-stories.sh --ai
 ```
 
 ### 实用命令

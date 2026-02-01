@@ -69,6 +69,9 @@ MONITOR_STALL_SECS=${MONITOR_STALL_SECS:-300}
 # to MAIN_LOG_FILE). Set to true to auto-confirm safe prompts.
 RAFFAELLO_ASSUME_YES=${RAFFAELLO_ASSUME_YES:-false}
 
+# Use Claude Code for AI merge conflict resolution
+USE_AI_MERGE=${USE_AI_MERGE:-false}
+
 # Parse command line arguments
 show_help() {
   cat <<EOF
@@ -79,6 +82,7 @@ Options:
   --max-parallel N      Maximum parallel stories per batch (default: 3)
   --auto-kill           Enable auto-kill for stalled agents
   --stall-secs N        Seconds before agent is considered stalled (default: 300)
+  --ai-merge            Use Claude Code to resolve merge conflicts
   --yes, -y             Auto-confirm prompts (non-interactive mode)
   --help, -h            Show this help message
 
@@ -87,6 +91,7 @@ Environment variables:
   MAX_PARALLEL_STORIES    Same as --max-parallel
   AUTO_MONITOR_KILL       Same as --auto-kill (set to "true")
   MONITOR_STALL_SECS      Same as --stall-secs
+  USE_AI_MERGE            Same as --ai-merge (set to "true")
   RAFFAELLO_ASSUME_YES        Same as --yes (set to "true")
 
 Examples:
@@ -116,6 +121,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --yes|-y)
       RAFFAELLO_ASSUME_YES=true
+      shift
+      ;;
+    --ai-merge)
+      USE_AI_MERGE=true
       shift
       ;;
     --help|-h)
@@ -492,6 +501,19 @@ check_prerequisites() {
     fi
   fi
 
+  # Auto-detect and export MAIN_BRANCH for merge-stories.sh
+  # This ensures prd.json branchName mismatch doesn't break merging
+  local actual_branch
+  actual_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+  local prd_branch
+  prd_branch=$(jq -r '.branchName // "main"' "$PRD_FILE" 2>/dev/null || echo "main")
+
+  if [[ "$actual_branch" != "$prd_branch" ]]; then
+    log_warn "prd.json branchName='$prd_branch' but current branch is '$actual_branch'"
+    log_warn "Using '$actual_branch' as MAIN_BRANCH for merging"
+  fi
+  export MAIN_BRANCH="$actual_branch"
+
   # Detect and validate CLI
   CLI=$(detect_cli)
   log_success "Detected CLI: $CLI"
@@ -572,6 +594,20 @@ execute_story() {
   rm -rf "$agent_comm_dir/$story_id" 2>/dev/null || true
   mkdir -p "$agent_comm_dir/$story_id" 2>/dev/null || true
 
+  # Determine the base branch/commit for this story
+  # Non-baseline stories should branch from their dependency's branch (if available)
+  # This ensures they inherit the code from previous stories
+  local base_ref="$MAIN_BRANCH"
+  local deps
+  deps=$(jq -r ".userStories[] | select(.id == \"$story_id\") | .dependencies[]?" "$PRD_FILE" 2>/dev/null | head -1)
+  if [[ -n "$deps" ]]; then
+    local dep_branch="story-$deps"
+    if git rev-parse --verify "$dep_branch" &>/dev/null; then
+      base_ref="$dep_branch"
+      log_info "Branching from dependency: $dep_branch"
+    fi
+  fi
+
   # Create worktree for this story (isolated working directory)
   if git rev-parse --verify "$branch_name" &>/dev/null; then
     # Branch exists, create worktree from it
@@ -594,21 +630,12 @@ execute_story() {
       }
     fi
   else
-    # Create new branch and worktree
-    # If branch already exists (race or leftover), fall back to creating from the existing branch.
-    if git rev-parse --verify "$branch_name" &>/dev/null; then
-      rm -rf "$worktree_dir" 2>/dev/null || true
-      git worktree add "$worktree_dir" "$branch_name" 2>/dev/null || {
-        log_error "Failed to create worktree for existing branch: $branch_name"
-        return 1
-      }
-    else
-      rm -rf "$worktree_dir" 2>/dev/null || true
-      git worktree add -b "$branch_name" "$worktree_dir" 2>/dev/null || {
-        log_error "Failed to create worktree with branch: $branch_name"
-        return 1
-      }
-    fi
+    # Create new branch and worktree based on dependency or main branch
+    rm -rf "$worktree_dir" 2>/dev/null || true
+    git worktree add -b "$branch_name" "$worktree_dir" "$base_ref" 2>/dev/null || {
+      log_error "Failed to create worktree with branch: $branch_name (base: $base_ref)"
+      return 1
+    }
   fi
 
   # Execute orchestrator in the worktree directory
@@ -869,7 +896,11 @@ main() {
 
   # Merge all story branches
   log_info "=== Merging Story Branches ==="
-  if "$SCRIPT_DIR/merge-stories.sh"; then
+  local merge_args=()
+  if [[ "$USE_AI_MERGE" == "true" ]]; then
+    merge_args+=("--ai")
+  fi
+  if "$SCRIPT_DIR/merge-stories.sh" "${merge_args[@]}"; then
     log_success "All stories merged successfully"
   else
     log_warn "Some merge conflicts require manual resolution"

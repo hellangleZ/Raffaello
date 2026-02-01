@@ -93,7 +93,7 @@ export AGENT_COMM_DIR="${AGENT_COMM_DIR:-/tmp/raffaello-parallel-$(echo "$PROJEC
 # Start monitor in background (observe-only); raffaello.sh may start monitor-kill separately.
 nohup env SHOW_STALE_STORIES=false SHOW_INACTIVE=false \
   INTERVAL_SECS="$INTERVAL_SECS" STALL_SECS="$STALL_SECS" \
-  bash /aml/raffaello/raffaello/monitor.sh "$PROJECT_DIR" \
+  bash "$SCRIPT_DIR/../raffaello/monitor.sh" "$PROJECT_DIR" \
   > .raffaello-logs/monitor.nohup.log 2>&1 &
 
 echo "[raffaello-start] monitor pid=$! (log: .raffaello-logs/monitor.nohup.log)"

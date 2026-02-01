@@ -25,9 +25,9 @@ Environment:
   AGENT_COMM_DIR         Defaults to /tmp/raffaello
 
 Examples:
-  /aml/raffaello/raffaello/kill-all.sh
-  /aml/raffaello/raffaello/kill-all.sh --project-dir /aml/test --clean-comm
-  /aml/raffaello/raffaello/kill-all.sh --project-dir /aml/test --clean-all
+  ./raffaello/kill-all.sh
+  ./raffaello/kill-all.sh --project-dir ~/my-project --clean-comm
+  ./raffaello/kill-all.sh --project-dir ~/my-project --clean-all
 EOF
 }
 
@@ -77,7 +77,7 @@ say "[kill-all] project=$PROJECT_DIR"
 say "[kill-all] agent_comm_dir=$AGENT_COMM_DIR"
 say "[kill-all] clean_comm=$CLEAN_COMM clean_worktrees=$CLEAN_WORKTREES clean_logs=$CLEAN_LOGS dry_run=$DRY_RUN"
 
-process_pattern='(\./raffaello\.sh|\.\./raffaello\.sh|/aml/raffaello/raffaello\.sh|raffaello/raffaello\.sh|/aml/raffaello/orchestrator\.sh|raffaello/orchestrator\.sh|/aml/raffaello/raffaello/monitor\.sh|raffaello/raffaello/monitor\.sh|/aml/raffaello/raffaello/monitor-kill\.sh|raffaello/raffaello/monitor-kill\.sh|(^|/)(claude|claude-code)( |$)|cc-pid-|cc-sync)'
+process_pattern='(\./raffaello\.sh|\.\./raffaello\.sh|raffaello/raffaello\.sh|raffaello/orchestrator\.sh|raffaello/raffaello/monitor\.sh|raffaello/raffaello/monitor-kill\.sh|(^|/)(claude|claude-code)( |$)|cc-pid-|cc-sync)'
 
 say "[kill-all] matching processes:"
 pgrep -af "$process_pattern" || true
