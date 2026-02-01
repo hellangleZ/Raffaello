@@ -44,3 +44,13 @@ node_modules/
 
 # Workflow retry files (temporary)
 *-retry-*.yaml
+
+# Development logs (not for distribution)
+FIXES_LOG.md
+IMPROVEMENTS.md
+PROGRESS.md
+TESTING.md
+TEST_RESULTS.md
+
+# User PRD file (use prd.json.example as template)
+prd.json
